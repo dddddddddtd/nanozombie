@@ -6,9 +6,35 @@
 
 #define ROOT 0
 
+//mozliwe ze to niepotrzebne
+#define INIT 1
+
 int getRandom(int lower, int upper)
 {
     return rand() % (upper - lower + 1) + lower;
+}
+
+void printArray(int *rank, int array[], int *count, char title[])
+{
+    char result[100] = "";
+    char test[60];
+    sprintf(test, "%d: %s : [", *rank, title);
+    strcat(result, test);
+
+    for (int i = 0; i < *count; i++)
+    {
+        if (i != *count - 1)
+        {
+            sprintf(test, "%d, ", array[i]);
+            strcat(result, test);
+        }
+        else
+        {
+            sprintf(test, "%d]", array[i]);
+            strcat(result, test);
+        }
+    }
+    printf("%s\n", result);
 }
 
 //program uruchamiany
@@ -30,6 +56,13 @@ int main(int argc, char **argv)
         exit(0);
     }
 
+    int touristCount = size;
+    int ponyCostumes = atoi(argv[1]);
+    int submarineCount = atoi(argv[2]);
+
+    int tourists[touristCount];
+    int submarines[submarineCount];
+
     if (rank == ROOT)
     {
         srand(time(0));
@@ -39,9 +72,6 @@ int main(int argc, char **argv)
         //to wtedy po tym ifie wszystko wspolne dla procesow lacznie z nim
         //było coś o tym wysyłaniu sam do siebie w opisie zegaru lamporta chyba
 
-        int touristCount = size;
-        int ponyCostumes = atoi(argv[1]);
-        int submarineCount = atoi(argv[2]);
         int touristRange[] = {atoi(argv[3]), atoi(argv[4])};
         int submarineRange[] = {atoi(argv[5]), atoi(argv[6])};
 
@@ -49,33 +79,37 @@ int main(int argc, char **argv)
         printf("tourist range: %d-%d\n", touristRange[0], touristRange[1]);
         printf("submarine range: %d-%d\n", submarineRange[0], submarineRange[1]);
 
-        int tourists[touristCount];
-        int submarines[submarineCount];
-
-        //initialize tourists
+        //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
         {
             tourists[i] = getRandom(touristRange[0], touristRange[1]);
         }
 
-        //initialize submarines
+        //inicjalizacja łodzi
         for (int i = 0; i < submarineCount; i++)
         {
             submarines[i] = getRandom(submarineRange[0], submarineRange[1]);
         }
 
-        for (int i = 0; i < touristCount; i++)
+        
+        //wysłanie danych do wszystkich procesów
+        for (int i = 0; i < size; i++)
         {
-            printf("turysta %d: %d\n", i, tourists[i]);
-        }
-
-        for (int i = 0; i < submarineCount; i++)
-        {
-            printf("submarine %d: %d\n", i, submarines[i]);
+            MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
+            MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
     }
+
+    //każdy proces odbiera dane
+    MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+    printArray(&rank, tourists, &touristCount, "turysci");
+    printArray(&rank, submarines, &submarineCount, "lodzie");
+
+    //tu cala robota procesow
+
 
     MPI_Finalize();
     return 0;
 }
-
