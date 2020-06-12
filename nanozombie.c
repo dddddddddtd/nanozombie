@@ -48,18 +48,27 @@ int main(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
 
-    //moze lepiej zamiast wywalac dac wartosci domyslne
-    if (argc < 7)
-    {
-        MPI_Finalize();
-        printf("Za malo argumentow\n");
-        exit(0);
-    }
-
     int touristCount = size;
-    int ponyCostumes = atoi(argv[1]);
-    int submarineCount = atoi(argv[2]);
-
+    int ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
+    if (argc != 7)
+    {
+        // dałem turystów na 20
+        ponyCostumes = 10;
+        submarineCount = 5;
+        touristRangeFrom = 1;
+        touristRangeTo = 3;
+        submarineRangeFrom = 3;
+        submarineRangeTo = 10;
+    }
+    else {
+        ponyCostumes = atoi(argv[1]);
+        submarineCount = atoi(argv[2]);
+        touristRangeFrom = atoi(argv[3]);
+        touristRangeTo = atoi(argv[4]);
+        submarineRangeFrom = atoi(argv[5]);
+        submarineRangeTo = atoi(argv[6]);
+    }
+    // int touristCount = size;
     int tourists[touristCount];
     int submarines[submarineCount];
 
@@ -72,23 +81,20 @@ int main(int argc, char **argv)
         //to wtedy po tym ifie wszystko wspolne dla procesow lacznie z nim
         //było coś o tym wysyłaniu sam do siebie w opisie zegaru lamporta chyba
 
-        int touristRange[] = {atoi(argv[3]), atoi(argv[4])};
-        int submarineRange[] = {atoi(argv[5]), atoi(argv[6])};
-
-        printf("tourists: %d\nponyCostumes: %d\nubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
-        printf("tourist range: %d-%d\n", touristRange[0], touristRange[1]);
-        printf("submarine range: %d-%d\n", submarineRange[0], submarineRange[1]);
+        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
+        printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
+        printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
         //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
         {
-            tourists[i] = getRandom(touristRange[0], touristRange[1]);
+            tourists[i] = getRandom(touristRangeFrom, touristRangeTo);
         }
 
         //inicjalizacja łodzi
         for (int i = 0; i < submarineCount; i++)
         {
-            submarines[i] = getRandom(submarineRange[0], submarineRange[1]);
+            submarines[i] = getRandom(submarineRangeFrom, submarineRangeTo);
         }
 
         
