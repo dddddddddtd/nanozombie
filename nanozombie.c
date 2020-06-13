@@ -42,24 +42,28 @@ int max(int a, int b) {
     return a > b ? a : b;
 }
 
+MPI_Datatype mpiLamportPacket;
 struct lamportPacket {
     int clock;
     char* message;
 };
-int lamportSend(int clock, int pi, int pj, char* messageOut) {
+int lamportSend(int clock, int src, int dest, char* messageOut) {
     int pClock = clock;
     pClock++;
     struct lamportPacket packetOut;
     packetOut.clock = pClock;
     strcpy(packetOut.message, messageOut);
-    // MPI_Send(&packetOut.clock, 1, MPI_INT, pj, MSG_TAG, MPI_COMM_WORLD);
-    // do wysłania raczej cały struct naraz, nie clock i message osobno
+    MPI_Send(&packetOut, 1, mpiLamportPacket, dest, MPI_ANY_TAG, MPI_COMM_WORLD);
     return pClock;
 }
-int lamportReceive(int clock, int pi, int pj) {
-    
-    // int pClock = max(clock, )
-    return 0;
+
+int lamportReceive(int clock, int src, int dest) {
+    MPI_Status status;
+    struct lamportPacket packetIn;
+    MPI_Recv(&packetIn, 1, mpiLamportPacket, src, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    int pClock = max(clock, packetIn.clock) + 1;
+    printf("Otrzymana wiadomość: %s\n", packetIn.message); //tresc wiadomosci
+    return pClock;
 }
 
 //program uruchamiany
@@ -68,6 +72,14 @@ int lamportReceive(int clock, int pi, int pj) {
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
+
+    int blocklengths[2] = {1, 1};
+    MPI_Datatype types[2] = {MPI_INT, MPI_CHAR};
+    MPI_Aint offsets[2];
+    MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
+    MPI_Type_commit(&mpiLamportPacket);
+
+
     int size, rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
