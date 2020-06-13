@@ -8,6 +8,9 @@
 
 //mozliwe ze to niepotrzebne
 #define INIT 1
+#define MESSAGE_TAG 2
+
+#define MESSAGE_SIZE 16
 
 int getRandom(int lower, int upper)
 {
@@ -42,27 +45,30 @@ int max(int a, int b) {
     return a > b ? a : b;
 }
 
+
 MPI_Datatype mpiLamportPacket;
-struct lamportPacket {
+
+typedef struct lamportPacket_s {
     int clock;
-    char* message;
-};
-int lamportSend(int clock, int src, int dest, char* messageOut) {
+    char message[MESSAGE_SIZE];
+} lamportPacket;
+
+int lamportSend(int clock, int src, int dest, char *messageOut) {
     int pClock = clock;
     pClock++;
-    struct lamportPacket packetOut;
+    lamportPacket packetOut;
     packetOut.clock = pClock;
     strcpy(packetOut.message, messageOut);
-    MPI_Send(&packetOut, 1, mpiLamportPacket, dest, MPI_ANY_TAG, MPI_COMM_WORLD);
+    MPI_Send(&packetOut, 1, mpiLamportPacket, dest, MESSAGE_TAG, MPI_COMM_WORLD);
     return pClock;
 }
 
 int lamportReceive(int clock, int src, int dest) {
     MPI_Status status;
-    struct lamportPacket packetIn;
-    MPI_Recv(&packetIn, 1, mpiLamportPacket, src, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    lamportPacket packetIn;
+    MPI_Recv(&packetIn, 1, mpiLamportPacket, src, MESSAGE_TAG, MPI_COMM_WORLD, &status);
     int pClock = max(clock, packetIn.clock) + 1;
-    printf("Otrzymana wiadomość: %s\n", packetIn.message); //tresc wiadomosci
+    printf("proces %d: otrzymana wiadomość: %s\n", dest, packetIn.message); //tresc wiadomosci
     return pClock;
 }
 
@@ -73,9 +79,12 @@ int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
 
-    int blocklengths[2] = {1, 1};
+    // konfiguracja structa dla MPI 
     MPI_Datatype types[2] = {MPI_INT, MPI_CHAR};
+    int blocklengths[2] =   {1, MESSAGE_SIZE};
     MPI_Aint offsets[2];
+    offsets[0] = offsetof(lamportPacket, clock);
+    offsets[1] = offsetof(lamportPacket, message);
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
     MPI_Type_commit(&mpiLamportPacket);
 
@@ -118,9 +127,9 @@ int main(int argc, char **argv)
         //to wtedy po tym ifie wszystko wspolne dla procesow lacznie z nim
         //było coś o tym wysyłaniu sam do siebie w opisie zegaru lamporta chyba
 
-        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
-        printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
-        printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
+        // printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
+        // printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
+        // printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
         //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
@@ -147,10 +156,23 @@ int main(int argc, char **argv)
     MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    printArray(&rank, tourists, &touristCount, "turysci");
-    printArray(&rank, submarines, &submarineCount, "lodzie");
+    // printArray(&rank, tourists, &touristCount, "turysci");
+    // printArray(&rank, submarines, &submarineCount, "lodzie");
 
     //tu cala robota procesow
+
+    // testowanie komunikacja lamporta - root wysyła do (siebie + 1) i +1 odbiera i printuje msg i clock
+    if (rank == ROOT) {
+        char* msg = "ACK";
+        int clock = 0;
+        clock = lamportSend(clock, ROOT, ROOT + 1, msg);
+    }
+    if (rank == ROOT + 1) {
+        int clock = 0;
+        clock = lamportReceive(clock, ROOT, ROOT + 1);
+        printf("zegar odbiorcy: %d\n", clock);
+    }
+
 
 
     MPI_Finalize();
