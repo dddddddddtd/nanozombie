@@ -54,22 +54,19 @@ typedef struct lamportPacket_s {
 } lamportPacket;
 
 int lamportSend(int clock, int src, int dest, char *messageOut) {
-    int pClock = clock;
-    pClock++;
     lamportPacket packetOut;
-    packetOut.clock = pClock;
+    packetOut.clock = clock + 1;
     strcpy(packetOut.message, messageOut);
     MPI_Send(&packetOut, 1, mpiLamportPacket, dest, MESSAGE_TAG, MPI_COMM_WORLD);
-    return pClock;
+    return packetOut.clock;
 }
 
-int lamportReceive(int clock, int src, int dest) {
+lamportPacket lamportReceive(int clock, int src, int dest) {
     MPI_Status status;
     lamportPacket packetIn;
     MPI_Recv(&packetIn, 1, mpiLamportPacket, src, MESSAGE_TAG, MPI_COMM_WORLD, &status);
-    int pClock = max(clock, packetIn.clock) + 1;
-    printf("proces %d: otrzymana wiadomość: %s\n", dest, packetIn.message); //tresc wiadomosci
-    return pClock;
+    packetIn.clock = max(clock, packetIn.clock) + 1;
+    return packetIn;
 }
 
 //program uruchamiany
@@ -169,8 +166,10 @@ int main(int argc, char **argv)
     }
     if (rank == ROOT + 1) {
         int clock = 0;
-        clock = lamportReceive(clock, ROOT, ROOT + 1);
-        printf("zegar odbiorcy: %d\n", clock);
+        lamportPacket receivePacket;
+        receivePacket = lamportReceive(clock, ROOT, ROOT + 1);
+        printf("zegar odbiorcy: %d\n", receivePacket.clock);
+        printf("wiadomośc od nadawcy: %s\n", receivePacket.message);
     }
 
 
