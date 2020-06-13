@@ -37,6 +37,31 @@ void printArray(int *rank, int array[], int *count, char title[])
     printf("%s\n", result);
 }
 
+// rzeczy lamporta
+int max(int a, int b) {
+    return a > b ? a : b;
+}
+
+struct lamportPacket {
+    int clock;
+    char* message;
+};
+int lamportSend(int clock, int pi, int pj, char* messageOut) {
+    int pClock = clock;
+    pClock++;
+    struct lamportPacket packetOut;
+    packetOut.clock = pClock;
+    strcpy(packetOut.message, messageOut);
+    // MPI_Send(&packetOut.clock, 1, MPI_INT, pj, MSG_TAG, MPI_COMM_WORLD);
+    // do wysłania raczej cały struct naraz, nie clock i message osobno
+    return pClock;
+}
+int lamportReceive(int clock, int pi, int pj) {
+    
+    // int pClock = max(clock, )
+    return 0;
+}
+
 //program uruchamiany
 //mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
 // <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
