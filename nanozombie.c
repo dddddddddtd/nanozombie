@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "vector.h"
 
@@ -180,16 +181,26 @@ int main(int argc, char **argv)
     // }
 
     // deklaracja zmiennych lokalnych procesu
+    int clock = 0;
     struct vector listKucykOk;
     struct vector listKucykHalt;
     struct vector listLodz;
     init_vector(&listKucykOk);
     init_vector(&listKucykHalt);
     init_vector(&listLodz);
-    
+
+
+    for (int i = 0; i < touristCount; i++)
+    {
+        // wysyłanie REQkucyk
+        // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
+        if (i != rank)
+        {
+            clock = lamportSend(clock, rank, i, "REQkucyk");
+        }
+    }
+
     MPI_Finalize();
 
-
-    
     return 0;
 }
