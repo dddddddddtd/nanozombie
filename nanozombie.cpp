@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <vector>
 
 #include "vector.h"
 
@@ -14,6 +15,8 @@
 #define MESSAGE_TAG 2
 
 #define MESSAGE_SIZE 16
+
+using namespace std;
 
 int getRandom(int lower, int upper)
 {
@@ -152,6 +155,20 @@ int main(int argc, char **argv)
             MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
             MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
+
+        vector<int> iVektor;
+
+        iVektor.push_back(0);
+        iVektor.push_back(1);
+        iVektor.push_back(2);
+        iVektor.push_back(3);
+        
+
+        for (int i = 0; i < iVektor.size(); i++)
+        {
+            printf("%d\n", iVektor[i]);
+        }
+        printf("hello world!\n");
     }
 
     //każdy proces odbiera dane
@@ -182,13 +199,9 @@ int main(int argc, char **argv)
 
     // deklaracja zmiennych lokalnych procesu
     int clock = 0;
-    struct vector listKucykOk;
-    struct vector listKucykHalt;
-    struct vector listLodz;
-    init_vector(&listKucykOk);
-    init_vector(&listKucykHalt);
-    init_vector(&listLodz);
-
+    vector<int> listKucykOk;
+    vector<int> listKucykHalt;
+    vector<int> listLodz;
 
     for (int i = 0; i < touristCount; i++)
     {
