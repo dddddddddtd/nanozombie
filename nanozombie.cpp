@@ -75,6 +75,23 @@ lamportPacket lamportReceive(int clock, int src, int dest)
     return packetIn;
 }
 
+struct first_thread_args
+{
+};
+struct second_thread_args
+{
+};
+void *first_thread_void(void *args)
+{
+    printf("WATEK 1\n");
+    return EXIT_SUCCESS;
+}
+void *second_thread_void(void *args)
+{
+    printf("WATEK 2\n");
+    return EXIT_SUCCESS;
+}
+
 void check_thread_support(int provided)
 {
     printf("THREAD SUPPORT: %d\n", provided);
@@ -221,10 +238,19 @@ int main(int argc, char **argv)
     // }
 
     // deklaracja zmiennych lokalnych procesu
+
     int clock = 0;
     vector<int> listKucykOk;
     vector<int> listKucykHalt;
     vector<int> listLodz;
+
+    first_thread_args args1;
+    second_thread_args args2;
+
+    pthread_t first_thread;
+    pthread_t second_thread;
+    pthread_create(&first_thread, NULL, first_thread_void, (void *)&args1);
+    pthread_create(&second_thread, NULL, second_thread_void, (void *)&args2);
 
     for (int i = 0; i < touristCount; i++)
     {
