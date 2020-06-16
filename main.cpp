@@ -1,12 +1,9 @@
-#include <mpi.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <pthread.h>
-#include <vector>
-
+#include "main.h"
 #include "utils.h"
+// #include "watek_komunikacyjny.h"
+// #include "watek_glowny.h"
+/* wątki */
+#include <pthread.h>
 
 #define ROOT 0
 
@@ -16,10 +13,10 @@
 
 #define MESSAGE_SIZE 16
 
-using namespace std;
+// zmienne extern
+int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
 
 // rzeczy lamporta
-
 MPI_Datatype mpiLamportPacket;
 
 typedef struct lamportPacket_s
@@ -63,14 +60,11 @@ void *second_thread_void(void *args)
     return EXIT_SUCCESS;
 }
 
-//program uruchamiany
-//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
-// <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
-int main(int argc, char **argv)
+void inicjuj(int argc, char **argv)
 {
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-    check_thread_support(provided);
+    // check_thread_support(provided);
 
     // konfiguracja structa dla MPI
     MPI_Datatype types[2] = {MPI_INT, MPI_CHAR};
@@ -81,13 +75,13 @@ int main(int argc, char **argv)
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
     MPI_Type_commit(&mpiLamportPacket);
 
-    int size, rank;
+    // int size, rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
+    srand(rank);
 
-    int touristCount = size;
-    int ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
+    touristCount = size;
     if (argc != 7)
     {
         // dałem turystów na 20
@@ -113,13 +107,8 @@ int main(int argc, char **argv)
 
     if (rank == ROOT)
     {
-        srand(time(0));
+        
         //inicjalizacja wszystkiego
-        //wysłanie danych do pozostałych procesów
-        //może też powinien wysyłać sam do siebie,
-        //to wtedy po tym ifie wszystko wspolne dla procesow lacznie z nim
-        //było coś o tym wysyłaniu sam do siebie w opisie zegaru lamporta chyba
-
         printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
         printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
         printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
@@ -142,28 +131,24 @@ int main(int argc, char **argv)
             MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
             MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
-
-        vector<int> iVektor;
-
-        iVektor.push_back(0);
-        iVektor.push_back(1);
-        iVektor.push_back(2);
-        iVektor.push_back(3);
-        iVektor.push_back(4);
-
-        for (int i = 0; i < iVektor.size(); i++)
-        {
-            printf("%d\n", iVektor[i]);
-        }
-        printf("hello world!\n");
     }
 
     //każdy proces odbiera dane
     MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    printArray(&rank, tourists, &touristCount, (char *)"turysci");
-    printArray(&rank, submarines, &submarineCount, (char *)"lodzie");
+    printArray(&rank, tourists, &touristCount, "turysci");
+    printArray(&rank, submarines, &submarineCount, "lodzie");
+
+    // pthread_create( &threadKom, NULL, startKomWatek , 0);
+}
+
+//program uruchamiany
+//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
+// <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
+int main(int argc, char **argv)
+{
+    inicjuj(argc,argv);
 
     //tu cala robota procesow
 
@@ -186,28 +171,28 @@ int main(int argc, char **argv)
 
     // deklaracja zmiennych lokalnych procesu
 
-    int clock = 0;
-    vector<int> listKucykOk;
-    vector<int> listKucykHalt;
-    vector<int> listLodz;
+    // int clock = 0;
+    // std::vector<int> listKucykOk;
+    // std::vector<int> listKucykHalt;
+    // std::vector<int> listLodz;
 
-    first_thread_args args1;
-    second_thread_args args2;
+    // first_thread_args args1;
+    // second_thread_args args2;
 
-    pthread_t first_thread;
-    pthread_t second_thread;
-    pthread_create(&first_thread, NULL, first_thread_void, (void *)&args1);
-    pthread_create(&second_thread, NULL, second_thread_void, (void *)&args2);
+    // pthread_t first_thread;
+    // pthread_t second_thread;
+    // pthread_create(&first_thread, NULL, first_thread_void, (void *)&args1);
+    // pthread_create(&second_thread, NULL, second_thread_void, (void *)&args2);
 
-    for (int i = 0; i < touristCount; i++)
-    {
-        // wysyłanie REQkucyk
-        // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
-        if (i != rank)
-        {
-            clock = lamportSend(clock, rank, i, (char *)"REQkucyk");
-        }
-    }
+    // for (int i = 0; i < touristCount; i++)
+    // {
+    //     // wysyłanie REQkucyk
+    //     // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
+    //     if (i != rank)
+    //     {
+    //         clock = lamportSend(clock, rank, i, (char *)"REQkucyk");
+    //     }
+    // }
 
     MPI_Finalize();
 

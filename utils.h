@@ -25,11 +25,11 @@ void printArray(int *rank, int array[], int *count, std::string title)
     {
         if (i != *count - 1)
         {
-            result+=std::to_string(*rank) +", ";
+            result+=std::to_string(array[i]) +", ";
         }
         else
         {
-            result+=std::to_string(*rank)+"]\n";
+            result+=std::to_string(array[i])+"]\n";
         }
     }
     std::cout<<result;
