@@ -1,10 +1,10 @@
 #include <mpi.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
 #include <vector>
+#include <string>
 
 int max(int a, int b)
 {
@@ -16,27 +16,23 @@ int getRandom(int lower, int upper)
     return rand() % (upper - lower + 1) + lower;
 }
 
-void printArray(int *rank, int array[], int *count, char title[])
+void printArray(int *rank, int array[], int *count, std::string title)
 {
-    char result[100] = "";
-    char test[60];
-    sprintf(test, "%d: %s : [", *rank, title);
-    strcat(result, test);
+    std::string result="";
+    result+=std::to_string(*rank)+": " + title + " : [";
 
     for (int i = 0; i < *count; i++)
     {
         if (i != *count - 1)
         {
-            sprintf(test, "%d, ", array[i]);
-            strcat(result, test);
+            result+=std::to_string(*rank) +", ";
         }
         else
         {
-            sprintf(test, "%d]", array[i]);
-            strcat(result, test);
+            result+=std::to_string(*rank)+"]\n";
         }
     }
-    printf("%s\n", result);
+    std::cout<<result;
 }
 
 void check_thread_support(int provided)
