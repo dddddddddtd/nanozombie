@@ -6,8 +6,6 @@
 #include <pthread.h>
 #include <vector>
 
-#include "vector.h"
-
 #define ROOT 0
 
 //mozliwe ze to niepotrzebne
@@ -17,7 +15,6 @@
 #define MESSAGE_SIZE 16
 
 using namespace std;
-
 int getRandom(int lower, int upper)
 {
     return rand() % (upper - lower + 1) + lower;
@@ -162,7 +159,7 @@ int main(int argc, char **argv)
         iVektor.push_back(1);
         iVektor.push_back(2);
         iVektor.push_back(3);
-        
+        iVektor.push_back(4);
 
         for (int i = 0; i < iVektor.size(); i++)
         {
@@ -175,8 +172,8 @@ int main(int argc, char **argv)
     MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    printArray(&rank, tourists, &touristCount, "turysci");
-    printArray(&rank, submarines, &submarineCount, "lodzie");
+    printArray(&rank, tourists, &touristCount, (char*)"turysci");
+    printArray(&rank, submarines, &submarineCount, (char*)"lodzie");
 
     //tu cala robota procesow
 
@@ -209,7 +206,7 @@ int main(int argc, char **argv)
         // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
         if (i != rank)
         {
-            clock = lamportSend(clock, rank, i, "REQkucyk");
+            clock = lamportSend(clock, rank, i, (char*)"REQkucyk");
         }
     }
 
