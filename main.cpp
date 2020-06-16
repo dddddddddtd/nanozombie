@@ -1,7 +1,7 @@
 #include "main.h"
 #include "utils.h"
-// #include "watek_komunikacyjny.h"
-// #include "watek_glowny.h"
+#include "watek_komunikacyjny.h"
+#include "watek_glowny.h"
 /* wątki */
 #include <pthread.h>
 
@@ -107,7 +107,7 @@ void inicjuj(int argc, char **argv)
 
     if (rank == ROOT)
     {
-        
+
         //inicjalizacja wszystkiego
         printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
         printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
@@ -131,6 +131,7 @@ void inicjuj(int argc, char **argv)
             MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
             MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
+        debug("jestem");
     }
 
     //każdy proces odbiera dane
@@ -143,12 +144,26 @@ void inicjuj(int argc, char **argv)
     // pthread_create( &threadKom, NULL, startKomWatek , 0);
 }
 
+void finalizuj()
+{
+    //niszczenie mutexów
+    //łączenie wątków
+
+    // pthread_mutex_destroy( &stateMut);
+    // /* Czekamy, aż wątek potomny się zakończy */
+    // println("czekam na wątek \"komunikacyjny\"\n" );
+    // pthread_join(threadKom,NULL);
+    // if (rank==0) pthread_join(threadMon,NULL);
+    // MPI_Type_free(&MPI_PAKIET_T);
+    MPI_Finalize();
+}
+
 //program uruchamiany
 //mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
 // <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
 int main(int argc, char **argv)
 {
-    inicjuj(argc,argv);
+    inicjuj(argc, argv);
 
     //tu cala robota procesow
 
@@ -193,8 +208,8 @@ int main(int argc, char **argv)
     //         clock = lamportSend(clock, rank, i, (char *)"REQkucyk");
     //     }
     // }
-
-    MPI_Finalize();
+    // mainLoop();
+    finalizuj();
 
     return 0;
 }

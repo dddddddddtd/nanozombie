@@ -13,7 +13,7 @@
 #include <vector>
 
 /* odkomentować, jeżeli się chce DEBUGI */
-//#define DEBUG 
+#define DEBUG 
 /* boolean */
 #define TRUE 1
 #define FALSE 0
@@ -33,13 +33,6 @@ extern int size;
 //zmienne dla każdego procesu
 
 extern int touristCount,ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
-
-/* Ile mamy łoju na składzie? */
-
-/* stan globalny wykryty przez monitor */
-extern int globalState;
-/* ilu już odpowiedziało na GIVEMESTATE */
-extern int numberReceived;
 
 /* to może przeniesiemy do global... */
 typedef struct {
