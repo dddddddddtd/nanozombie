@@ -75,12 +75,38 @@ lamportPacket lamportReceive(int clock, int src, int dest)
     return packetIn;
 }
 
+void check_thread_support(int provided)
+{
+    printf("THREAD SUPPORT: %d\n", provided);
+    switch (provided)
+    {
+    case MPI_THREAD_SINGLE:
+        printf("Brak wsparcia dla wątków, kończę\n");
+        MPI_Finalize();
+        exit(-1);
+        break;
+    case MPI_THREAD_FUNNELED:
+        printf("tylko te wątki, ktore wykonaly mpi_init_thread mogą wykonać wołania do biblioteki mpi\n");
+        break;
+    case MPI_THREAD_SERIALIZED:
+        printf("tylko jeden watek naraz może wykonać wołania do biblioteki MPI\n");
+        break;
+    case MPI_THREAD_MULTIPLE:
+        printf("Pełne wsparcie dla wątków\n");
+        break;
+    default:
+        printf("Nikt nic nie wie\n");
+    }
+}
+
 //program uruchamiany
 //mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
 // <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
 int main(int argc, char **argv)
 {
-    MPI_Init(&argc, &argv);
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+    check_thread_support(provided);
 
     // konfiguracja structa dla MPI
     MPI_Datatype types[2] = {MPI_INT, MPI_CHAR};
@@ -172,8 +198,8 @@ int main(int argc, char **argv)
     MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    printArray(&rank, tourists, &touristCount, (char*)"turysci");
-    printArray(&rank, submarines, &submarineCount, (char*)"lodzie");
+    printArray(&rank, tourists, &touristCount, (char *)"turysci");
+    printArray(&rank, submarines, &submarineCount, (char *)"lodzie");
 
     //tu cala robota procesow
 
@@ -206,7 +232,7 @@ int main(int argc, char **argv)
         // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
         if (i != rank)
         {
-            clock = lamportSend(clock, rank, i, (char*)"REQkucyk");
+            clock = lamportSend(clock, rank, i, (char *)"REQkucyk");
         }
     }
 
