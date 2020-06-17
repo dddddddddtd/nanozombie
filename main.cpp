@@ -129,9 +129,9 @@ void inicjuj(int argc, char **argv)
     {
 
         //inicjalizacja wszystkiego
-        // printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
-        // printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
-        // printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
+        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
+        printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
+        printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
         //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
@@ -151,7 +151,7 @@ void inicjuj(int argc, char **argv)
             MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
             MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
-        debug("jestem");
+        // debug("jestem");
     }
 
     //każdy proces odbiera dane

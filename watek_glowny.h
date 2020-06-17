@@ -1,3 +1,5 @@
+#include <chrono>
+#include <thread>
 #include "main.h"
 // #include "utils.h"
 
@@ -47,8 +49,16 @@ void mainLoop()
 
         if (stan == Pony)
         {
-            sleep(SEC_IN_STATE);
-
+            debug("Mam stroj kucyka");
+            // czas
+            // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            // usleep(1000000);
+            // for (int i=0; i < 200000000; i++) {
+            //     i = 2 + i;
+            //     i = i - 2;
+            // }
+            
+            
             std::vector<int> receivers;
             for (int i = 0; i < size; i++)
                 receivers.push_back(i);
