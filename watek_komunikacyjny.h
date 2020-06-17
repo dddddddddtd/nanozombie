@@ -17,55 +17,21 @@ void *startKomWatek(void *ptr)
         switch (status.MPI_TAG)
         {
         case REQkucyk:
-            if (stan == Inactive || status.MPI_SOURCE == rank)
-            {
-                debug("!%d - %d! nieaktywny lub do siebie: udzielam ACKkucyk", status.MPI_SOURCE, packet.lamportClock);
-                lamportSend(rank, status.MPI_SOURCE, ACKkucyk, &lamportClock);
-                LISTkucykOK.push_back(status.MPI_SOURCE);
-            }
-            else if (stan == PonyQ)
-            {
-                if (lamportClock < packet.lamportClock)
-                {
-                    debug("qclock=%d !%d - %d! wyższy priorytet, wrzucam do HALT", lamportClock, status.MPI_SOURCE, packet.lamportClock);
-                    //dodać do listy, do których potem wysłać ack
-                    LISTkucykHALT.push_back(status.MPI_SOURCE);
-                }
-                else if (lamportClock > packet.lamportClock)
-                {
-                    debug("qclock=%d !%d - %d! niższy priorytet, udzielam ACKkucyk", lamportClock, status.MPI_SOURCE, packet.lamportClock);
-                    lamportSend(rank, status.MPI_SOURCE, ACKkucyk, &lamportClock);
-                    LISTkucykOK.push_back(status.MPI_SOURCE);
-                }
-                else if (lamportClock == packet.lamportClock)
-                {
-                    if (rank < status.MPI_SOURCE)
-                    {
-                        debug("qclock=%d !%d - %d! niższy identyfikator, wrzucam do HALT", lamportClock, status.MPI_SOURCE, packet.lamportClock);
-                        //dodac do listy do ktorych potem wyslac ack
-                        LISTkucykHALT.push_back(status.MPI_SOURCE);
-                    }
-                    else
-                    {
-                        debug("qclock=%d !%d - %d! wyższy identyfikator, udzielam ACKkucyk", lamportClock, status.MPI_SOURCE, packet.lamportClock);
-                        lamportSend(rank, status.MPI_SOURCE, ACKkucyk, &lamportClock);
-                        LISTkucykOK.push_back(status.MPI_SOURCE);
-                    }
-                }
-            }
+            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock));
+            lamportSend(rank, std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock);
             break;
         case ACKkucyk:
             debug("otrzymałem zgode kucyka od %d", status.MPI_SOURCE);
             ponyACKcount++;
             if (ponyACKcount == touristCount)
             {
-                changeState(Pony);
+                changeState(PonyQ);
                 debug("Otrzymalem wszystkie zgody na kucyka");
             }
             //zwieksza licznik zgod, jesli ten sie zgadza to odczekuje chwile i zmienia stan na SubQ chbya
             break;
         case RELkucyk:
-            LISTkucykOK.erase(std::remove(LISTkucykOK.begin(), LISTkucykOK.end(), status.MPI_SOURCE), LISTkucykOK.end());
+            LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end());
             //tu w sumie nie wiem, jeszcze do przemyslenia bo nie wiem czy stany beda sie zmieniac i w komunikacyjnym i glownym chyba tak
             break;
         case REQlodz:

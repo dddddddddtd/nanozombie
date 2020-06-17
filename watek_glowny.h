@@ -1,5 +1,14 @@
 #include "main.h"
 // #include "utils.h"
+
+void printLISTkucyk(int index){
+    std::string res="";
+    for(int i=0; i<LISTkucyk.size(); i++){
+        res+="["+std::to_string(LISTkucyk[i].processid)+", "+std::to_string(LISTkucyk[i].lamportClock)+"] ";
+    }
+    debug("%s %d", res.c_str(), index);
+}
+
 void mainLoop()
 {
     while (1)
@@ -10,44 +19,48 @@ void mainLoop()
 
             if (perc < STATE_CHANGE_PROB)
             {
-                if (LISTkucykOK.size() < ponyCostumes)
-                {
-                    debug("Ubiegam się o kostium kucyka");
-                    ponyACKcount = 0;
-                    changeState(PonyQ);
-                    ponyQclock = lamportClock;
+                debug("Ubiegam się o kostium kucyka");
+                ponyACKcount = 0;
+                changeState(PonyWait);
 
-                    for (int i = 0; i < size; i++)
-                    {
-                        lamportSend(rank, i, REQkucyk, &lamportClock);
-                    }
-                    debug("Czekam na zgody na kucyka");
-                }
+                std::vector<int> receivers;
+                for (int i = 0; i < size; i++)
+                    receivers.push_back(i);
+
+                lamportSend(rank, receivers, REQkucyk, &lamportClock);
+
+                debug("Czekam na zgody na kucyka");
             }
         }
-
-        if (stan == PonyQ) 
+        if (stan == PonyWait)
         {
+        }
+
+        if (stan == PonyQ)
+        {
+            std::sort(LISTkucyk.begin(), LISTkucyk.end());
+            int index = std::distance(LISTkucyk.begin(), std::find(LISTkucyk.begin(), LISTkucyk.end(), rank));
+            printLISTkucyk(index);
+            if (index < ponyCostumes)
+                changeState(Pony);
         }
 
         if (stan == Pony)
         {
-            sleep(SEC_IN_STATE*2000);
+            sleep(SEC_IN_STATE);
+
+            std::vector<int> receivers;
             for (int i = 0; i < size; i++)
-            {
-                lamportSend(rank, i, RELkucyk, &lamportClock);
-            }
+                receivers.push_back(i);
 
-            for(int i=0; i<LISTkucykHALT.size(); i++){
-                lamportSend(rank, LISTkucykHALT[i], ACKkucyk, &lamportClock);
-            }
-
+            lamportSend(rank, receivers, RELkucyk, &lamportClock);
             debug("Zwalniam stroj kucyka");
-            changeState(Inactive);
+            changeState(SubQ);
         }
-        
-        if(stan==SubQ){
 
+        if (stan == SubQ)
+        {
         }
     }
 }
+

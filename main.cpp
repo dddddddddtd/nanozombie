@@ -3,6 +3,7 @@
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
 #include <pthread.h>
+#include <algorithm>
 
 #define ROOT 0
 
@@ -14,10 +15,10 @@
 
 // zmienne extern
 int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
-int ponyQclock;
 int ponyACKcount;
 
 std::vector<int> LISTkucykOK, LISTkucykHALT;
+std::vector<Request> LISTkucyk;
 
 // mutex stan
 pthread_t threadKom;
@@ -28,22 +29,24 @@ state_t stan = Inactive;
 // rzeczy lamporta
 MPI_Datatype mpiLamportPacket;
 
-
-
-int lamportSend(int src, int dest, int tag, int *lamportClock)
+void lamportSend(int src, std::vector<int> receivers, int tag, int *lamportClock)
 {
     lamportPacket packetOut;
     packetOut.lamportClock = *lamportClock + 1;
-
+    packetOut.src = src;
     pthread_mutex_lock(&lamportMut);
     *lamportClock++;
     pthread_mutex_unlock(&lamportMut);
-    
-    packetOut.src = src;
-    return MPI_Send(&packetOut, 1, mpiLamportPacket, dest, tag, MPI_COMM_WORLD);
+
+    // printf("%d\n", receivers.size());
+
+    for (int i = 0; i < receivers.size(); i++)
+    {
+        MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
+    }
 }
 
-int lamportReceive(lamportPacket * packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
+int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
     packetIn->lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
@@ -126,9 +129,9 @@ void inicjuj(int argc, char **argv)
     {
 
         //inicjalizacja wszystkiego
-        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
-        printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
-        printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
+        // printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
+        // printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
+        // printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
         //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
@@ -155,10 +158,10 @@ void inicjuj(int argc, char **argv)
     MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-    printArray(&rank, tourists, &touristCount, "turysci");
-    printArray(&rank, submarines, &submarineCount, "lodzie");
+    // printArray(&rank, tourists, &touristCount, "turysci");
+    // printArray(&rank, submarines, &submarineCount, "lodzie");
 
-    pthread_create( &threadKom, NULL, startKomWatek, NULL);
+    pthread_create(&threadKom, NULL, startKomWatek, NULL);
 }
 
 void finalizuj()
@@ -182,49 +185,6 @@ int main(int argc, char **argv)
 {
     inicjuj(argc, argv);
 
-    //tu cala robota procesow
-
-    // testowanie komunikacja lamporta - root wysyła do (siebie + 1) i +1 odbiera i printuje msg i lamportClock
-    // teraz zakomentowane - możesz sobie przetestować jak chcesz
-    // if (rank == ROOT)
-    // {
-    //     char *msg = "ACK";
-    //     int lamportClock = 0;
-    //     lamportClock = lamportSend(lamportClock, ROOT, ROOT + 1, msg);
-    // }
-    // if (rank == ROOT + 1)
-    // {
-    //     int lamportClock = 0;
-    //     lamportPacket receivePacket;
-    //     receivePacket = lamportReceive(lamportClock, ROOT, ROOT + 1);
-    //     printf("zegar odbiorcy: %d\n", receivePacket.lamportClock);
-    //     printf("wiadomośc od nadawcy: %s\n", receivePacket.message);
-    // }
-
-    // deklaracja zmiennych lokalnych procesu
-
-    // int lamportClock = 0;
-    // std::vector<int> listKucykOk;
-    // std::vector<int> listKucykHalt;
-    // std::vector<int> listLodz;
-
-    // first_thread_args args1;
-    // second_thread_args args2;
-
-    // pthread_t first_thread;
-    // pthread_t second_thread;
-    // pthread_create(&first_thread, NULL, first_thread_void, (void *)&args1);
-    // pthread_create(&second_thread, NULL, second_thread_void, (void *)&args2);
-
-    // for (int i = 0; i < touristCount; i++)
-    // {
-    //     // wysyłanie REQkucyk
-    //     // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
-    //     if (i != rank)
-    //     {
-    //         lamportClock = lamportSend(lamportClock, rank, i, (char *)"REQkucyk");
-    //     }
-    // }
     mainLoop();
     finalizuj();
 
