@@ -33,15 +33,19 @@ extern int size;
 //zmienne dla każdego procesu
 
 extern int touristCount,ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
+extern int ponyQclock;
+extern int ponyACKcount;
+
+extern std::vector<int> LISTkucykOK;
+extern std::vector<int> LISTkucykHALT;
 
 /* to może przeniesiemy do global... */
-typedef struct {
-    int ts;       /* timestamp (zegar lamporta */
-    int src;      /* pole nie przesyłane, ale ustawiane w main_loop */
-
-    int data;     /* przykładowe pole z danymi; można zmienić nazwę na bardziej pasującą */
-} packet_t;
-extern MPI_Datatype MPI_PAKIET_T;
+typedef struct
+{
+    int lamportClock;
+    int src;
+} lamportPacket;
+extern MPI_Datatype mpiLamportPacket;
 
 /* Typy wiadomości */
 #define REQkucyk 1
@@ -71,7 +75,7 @@ extern MPI_Datatype MPI_PAKIET_T;
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT,...) printf("%c[%d;%dm [%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
+#define debug(FORMAT,...) printf("%c[%d;%dm [%d - %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, lamportClock, ##__VA_ARGS__, 27,0,37);
 #else
 #define debug(...) ;
 #endif
@@ -90,7 +94,9 @@ extern MPI_Datatype MPI_PAKIET_T;
 #define println(FORMAT, ...) printf("%c[%d;%dm [%d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, rank, ##__VA_ARGS__, 27,0,37);
 
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
-void sendPacket(packet_t *pkt, int destination, int tag);
 void changeState( state_t );
-void changeTallow( int );
+
+int lamportSend(int src, int dest, int tag, int *lamportClock);
+int lamportReceive(lamportPacket * packetIn, int src, int tag, MPI_Status *status, int *lamportClock);
+
 #endif

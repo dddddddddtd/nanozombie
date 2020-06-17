@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
-/* wątki */
 #include <pthread.h>
 
 #define ROOT 0
@@ -15,26 +14,31 @@
 
 // zmienne extern
 int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
+int ponyQclock;
+int ponyACKcount;
+
+std::vector<int> LISTkucykOK, LISTkucykHALT;
 
 // mutex stan
 pthread_t threadKom;
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 state_t stan = Inactive;
 
 // rzeczy lamporta
 MPI_Datatype mpiLamportPacket;
 
-typedef struct
-{
-    int lamportClock;
-    int src;
-} lamportPacket;
+
 
 int lamportSend(int src, int dest, int tag, int *lamportClock)
 {
     lamportPacket packetOut;
     packetOut.lamportClock = *lamportClock + 1;
+
+    pthread_mutex_lock(&lamportMut);
     *lamportClock++;
+    pthread_mutex_unlock(&lamportMut);
+    
     packetOut.src = src;
     return MPI_Send(&packetOut, 1, mpiLamportPacket, dest, tag, MPI_COMM_WORLD);
 }
@@ -43,7 +47,9 @@ int lamportReceive(lamportPacket * packetIn, int src, int tag, MPI_Status *statu
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
     packetIn->lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
+    pthread_mutex_lock(&lamportMut);
     *lamportClock = packetIn->lamportClock;
+    pthread_mutex_unlock(&lamportMut);
     return result;
 }
 
@@ -96,7 +102,7 @@ void inicjuj(int argc, char **argv)
     if (argc != 7)
     {
         // dałem turystów na 20
-        ponyCostumes = 10;
+        ponyCostumes = 2;
         submarineCount = 5;
         touristRangeFrom = 1;
         touristRangeTo = 3;
