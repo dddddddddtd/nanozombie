@@ -25,14 +25,14 @@
 #define ROOT 0
 
 /* stany procesu */
-typedef enum {Inactive, PonyQ, SubQ, Trip} state_t;
+typedef enum {Inactive, PonyQ, SubQ, Trip, Pony} state_t;
 extern state_t stan;
 extern int rank;
 extern int size;
 
 //zmienne dla każdego procesu
 
-extern int touristCount,ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
+extern int touristCount,ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
 
 /* to może przeniesiemy do global... */
 typedef struct {
@@ -44,13 +44,13 @@ typedef struct {
 extern MPI_Datatype MPI_PAKIET_T;
 
 /* Typy wiadomości */
-#define REQpony 1
-#define ACKpony 2
-#define RELpony 3
-#define REQsub 4
-#define ACKsub 5
-#define RELsub 6
-#define FULLsub 7
+#define REQkucyk 1
+#define ACKkucyk 2
+#define RELkucyk 3
+#define REQlodz 4
+#define ACKlodz 5
+#define RELlodz 6
+#define FULLlodz 7
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 

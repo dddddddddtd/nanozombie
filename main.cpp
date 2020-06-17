@@ -11,36 +11,47 @@
 #define INIT 1
 #define MESSAGE_TAG 2
 
-#define MESSAGE_SIZE 16
+// #define MESSAGE_SIZE 16
 
 // zmienne extern
-int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo;
+int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
+
+// mutex stan
+pthread_t threadKom;
+pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
+state_t stan = Inactive;
 
 // rzeczy lamporta
 MPI_Datatype mpiLamportPacket;
 
-typedef struct lamportPacket_s
+typedef struct
 {
-    int clock;
-    char message[MESSAGE_SIZE];
+    int lamportClock;
+    int src;
 } lamportPacket;
 
-int lamportSend(int clock, int src, int dest, char *messageOut)
+int lamportSend(int src, int dest, int tag, int *lamportClock)
 {
     lamportPacket packetOut;
-    packetOut.clock = clock + 1;
-    strcpy(packetOut.message, messageOut);
-    MPI_Send(&packetOut, 1, mpiLamportPacket, dest, MESSAGE_TAG, MPI_COMM_WORLD);
-    return packetOut.clock;
+    packetOut.lamportClock = *lamportClock + 1;
+    *lamportClock++;
+    packetOut.src = src;
+    return MPI_Send(&packetOut, 1, mpiLamportPacket, dest, tag, MPI_COMM_WORLD);
 }
 
-lamportPacket lamportReceive(int clock, int src, int dest)
+int lamportReceive(lamportPacket * packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
 {
-    MPI_Status status;
-    lamportPacket packetIn;
-    MPI_Recv(&packetIn, 1, mpiLamportPacket, src, MESSAGE_TAG, MPI_COMM_WORLD, &status);
-    packetIn.clock = max(clock, packetIn.clock) + 1;
-    return packetIn;
+    int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
+    packetIn->lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
+    *lamportClock = packetIn->lamportClock;
+    return result;
+}
+
+void changeState(state_t newState)
+{
+    pthread_mutex_lock(&stateMut);
+    stan = newState;
+    pthread_mutex_unlock(&stateMut);
 }
 
 struct first_thread_args
@@ -67,11 +78,11 @@ void inicjuj(int argc, char **argv)
     // check_thread_support(provided);
 
     // konfiguracja structa dla MPI
-    MPI_Datatype types[2] = {MPI_INT, MPI_CHAR};
-    int blocklengths[2] = {1, MESSAGE_SIZE};
+    MPI_Datatype types[2] = {MPI_INT, MPI_INT};
+    int blocklengths[2] = {1, 1};
     MPI_Aint offsets[2];
-    offsets[0] = offsetof(lamportPacket, clock);
-    offsets[1] = offsetof(lamportPacket, message);
+    offsets[0] = offsetof(lamportPacket, lamportClock);
+    offsets[1] = offsetof(lamportPacket, src);
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
     MPI_Type_commit(&mpiLamportPacket);
 
@@ -141,7 +152,7 @@ void inicjuj(int argc, char **argv)
     printArray(&rank, tourists, &touristCount, "turysci");
     printArray(&rank, submarines, &submarineCount, "lodzie");
 
-    // pthread_create( &threadKom, NULL, startKomWatek , 0);
+    pthread_create( &threadKom, NULL, startKomWatek, NULL);
 }
 
 void finalizuj()
@@ -167,26 +178,26 @@ int main(int argc, char **argv)
 
     //tu cala robota procesow
 
-    // testowanie komunikacja lamporta - root wysyła do (siebie + 1) i +1 odbiera i printuje msg i clock
+    // testowanie komunikacja lamporta - root wysyła do (siebie + 1) i +1 odbiera i printuje msg i lamportClock
     // teraz zakomentowane - możesz sobie przetestować jak chcesz
     // if (rank == ROOT)
     // {
     //     char *msg = "ACK";
-    //     int clock = 0;
-    //     clock = lamportSend(clock, ROOT, ROOT + 1, msg);
+    //     int lamportClock = 0;
+    //     lamportClock = lamportSend(lamportClock, ROOT, ROOT + 1, msg);
     // }
     // if (rank == ROOT + 1)
     // {
-    //     int clock = 0;
+    //     int lamportClock = 0;
     //     lamportPacket receivePacket;
-    //     receivePacket = lamportReceive(clock, ROOT, ROOT + 1);
-    //     printf("zegar odbiorcy: %d\n", receivePacket.clock);
+    //     receivePacket = lamportReceive(lamportClock, ROOT, ROOT + 1);
+    //     printf("zegar odbiorcy: %d\n", receivePacket.lamportClock);
     //     printf("wiadomośc od nadawcy: %s\n", receivePacket.message);
     // }
 
     // deklaracja zmiennych lokalnych procesu
 
-    // int clock = 0;
+    // int lamportClock = 0;
     // std::vector<int> listKucykOk;
     // std::vector<int> listKucykHalt;
     // std::vector<int> listLodz;
@@ -205,10 +216,10 @@ int main(int argc, char **argv)
     //     // to chyba trzeba wielowątkowo ehhh, bo nie mam pomysłu jak inaczej
     //     if (i != rank)
     //     {
-    //         clock = lamportSend(clock, rank, i, (char *)"REQkucyk");
+    //         lamportClock = lamportSend(lamportClock, rank, i, (char *)"REQkucyk");
     //     }
     // }
-    // mainLoop();
+    mainLoop();
     finalizuj();
 
     return 0;
