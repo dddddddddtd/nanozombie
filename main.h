@@ -125,7 +125,7 @@ extern MPI_Datatype mpiLamportPacket;
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
 void changeState(state_t);
 
-void lamportSend(int src, std::vector<int> receivers, int tag, int *lamportClock);
+void lamportSend(std::vector<int> receivers, int tag, int *lamportClock);
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock);
 
 #endif

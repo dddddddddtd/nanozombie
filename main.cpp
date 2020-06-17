@@ -29,11 +29,10 @@ state_t stan = Inactive;
 // rzeczy lamporta
 MPI_Datatype mpiLamportPacket;
 
-void lamportSend(int src, std::vector<int> receivers, int tag, int *lamportClock)
+void lamportSend(std::vector<int> receivers, int tag, int *lamportClock)
 {
     lamportPacket packetOut;
     packetOut.lamportClock = *lamportClock + 1;
-    packetOut.src = src;
     pthread_mutex_lock(&lamportMut);
     *lamportClock++;
     pthread_mutex_unlock(&lamportMut);
@@ -49,9 +48,8 @@ void lamportSend(int src, std::vector<int> receivers, int tag, int *lamportClock
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
-    packetIn->lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
     pthread_mutex_lock(&lamportMut);
-    *lamportClock = packetIn->lamportClock;
+    *lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
     pthread_mutex_unlock(&lamportMut);
     return result;
 }
@@ -105,7 +103,7 @@ void inicjuj(int argc, char **argv)
     if (argc != 7)
     {
         // dałem turystów na 20
-        ponyCostumes = 2;
+        ponyCostumes = 6;
         submarineCount = 5;
         touristRangeFrom = 1;
         touristRangeTo = 3;

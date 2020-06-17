@@ -18,10 +18,9 @@ void *startKomWatek(void *ptr)
         {
         case REQkucyk:
             LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock));
-            lamportSend(rank, std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock);
+            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock);
             break;
         case ACKkucyk:
-            debug("otrzymałem zgode kucyka od %d", status.MPI_SOURCE);
             ponyACKcount++;
             if (ponyACKcount == touristCount)
             {
