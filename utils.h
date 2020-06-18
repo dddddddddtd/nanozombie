@@ -16,23 +16,36 @@ int getRandom(int lower, int upper)
     return rand() % (upper - lower + 1) + lower;
 }
 
+void waitFor(int a, int b, const char *text)
+{
+    double t1, t2;
+    t1 = MPI_Wtime();
+    t2 = MPI_Wtime();
+    double waittime = (double) getRandom(a, b);
+    debug("%s - wylosowalem czas: %f", text, waittime);
+    while (t2 - t1 < waittime)
+    {
+        t2 = MPI_Wtime();
+    }
+}
+
 void printArray(int *rank, int array[], int *count, std::string title)
 {
-    std::string result="";
-    result+=std::to_string(*rank)+": " + title + " : [";
+    std::string result = "";
+    result += std::to_string(*rank) + ": " + title + " : [";
 
     for (int i = 0; i < *count; i++)
     {
         if (i != *count - 1)
         {
-            result+=std::to_string(array[i]) +", ";
+            result += std::to_string(array[i]) + ", ";
         }
         else
         {
-            result+=std::to_string(array[i])+"]\n";
+            result += std::to_string(array[i]) + "]\n";
         }
     }
-    std::cout<<result;
+    std::cout << result;
 }
 
 void check_thread_support(int provided)

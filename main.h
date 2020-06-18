@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <vector>
+#include <algorithm>
 
 /* odkomentować, jeżeli się chce DEBUGI */
 #define DEBUG

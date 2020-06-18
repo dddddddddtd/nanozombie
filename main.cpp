@@ -2,8 +2,7 @@
 #include "utils.h"
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
-#include <pthread.h>
-#include <algorithm>
+
 
 #define ROOT 0
 
@@ -103,7 +102,7 @@ void inicjuj(int argc, char **argv)
     if (argc != 7)
     {
         // dałem turystów na 20
-        ponyCostumes = 6;
+        ponyCostumes = 2;
         submarineCount = 5;
         touristRangeFrom = 1;
         touristRangeTo = 3;

@@ -1,5 +1,4 @@
 #include "main.h"
-#include <algorithm>
 
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
 void *startKomWatek(void *ptr)

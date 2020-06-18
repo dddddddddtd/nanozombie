@@ -1,6 +1,4 @@
-
 #include "main.h"
-// #include "utils.h"
 
 void printLISTkucyk(int index)
 {
@@ -18,22 +16,19 @@ void mainLoop()
     {
         if (stan == Inactive)
         {
-            int perc = random() % 100;
+            waitFor(0, 15, "zanim zaczne ubiegac sie o kucyka");
 
-            if (perc < STATE_CHANGE_PROB)
-            {
-                debug("Ubiegam się o kostium kucyka: moj lamport = %d", lamportClock+1);
-                ponyACKcount = 0;
-                changeState(PonyWait);
+            debug("Ubiegam się o kostium kucyka: moj lamport = %d", lamportClock + 1);
+            ponyACKcount = 0;
+            changeState(PonyWait);
 
-                std::vector<int> receivers;
-                for (int i = 0; i < size; i++)
-                    receivers.push_back(i);
+            std::vector<int> receivers;
+            for (int i = 0; i < size; i++)
+                receivers.push_back(i);
 
-                lamportSend(receivers, REQkucyk, &lamportClock);
+            lamportSend(receivers, REQkucyk, &lamportClock);
 
-                debug("Czekam na zgody na kucyka");
-            }
+            debug("Czekam na zgody na kucyka");
         }
         if (stan == PonyWait)
         {
@@ -54,19 +49,13 @@ void mainLoop()
 
         if (stan == Pony)
         {
-            debug("Mam stroj kucyka");
+            waitFor(2, 10, "mam kucyka");
 
             std::vector<int> receivers;
             for (int i = 0; i < size; i++)
                 receivers.push_back(i);
 
             lamportSend(receivers, RELkucyk, &lamportClock);
-            debug("Zwalniam stroj kucyka");
-            changeState(SubQ);
-        }
-
-        if (stan == SubQ)
-        {
         }
     }
 }
