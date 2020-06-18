@@ -29,14 +29,14 @@ void waitFor(int a, int b, const char *text)
     }
 }
 
-void printArray(int *rank, int array[], int *count, std::string title)
+void printArray(int *rank, int array[], int count, std::string title)
 {
     std::string result = "";
     result += std::to_string(*rank) + ": " + title + " : [";
 
-    for (int i = 0; i < *count; i++)
+    for (int i = 0; i < count; i++)
     {
-        if (i != *count - 1)
+        if (i != count - 1)
         {
             result += std::to_string(array[i]) + ", ";
         }

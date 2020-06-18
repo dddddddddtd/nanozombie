@@ -3,7 +3,6 @@
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
 
-
 #define ROOT 0
 
 //mozliwe ze to niepotrzebne
@@ -13,11 +12,12 @@
 // #define MESSAGE_SIZE 16
 
 // zmienne extern
-int rank, size, touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
-int ponyACKcount;
+int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
+int kucykACKcount, lodzACKcount;
+int wybieranaLodz;
 
-std::vector<int> LISTkucykOK, LISTkucykHALT;
-std::vector<Request> LISTkucyk;
+std::vector<Request> LISTkucyk, LISTlodz;
+std::vector<int> tourists, submarines, touristsId;
 
 // mutex stan
 pthread_t threadKom;
@@ -35,8 +35,6 @@ void lamportSend(std::vector<int> receivers, int tag, int *lamportClock)
     pthread_mutex_lock(&lamportMut);
     *lamportClock++;
     pthread_mutex_unlock(&lamportMut);
-
-    // printf("%d\n", receivers.size());
 
     for (int i = 0; i < receivers.size(); i++)
     {
@@ -60,21 +58,14 @@ void changeState(state_t newState)
     pthread_mutex_unlock(&stateMut);
 }
 
-struct first_thread_args
+std::string stringLIST(std::vector<Request> LIST)
 {
-};
-struct second_thread_args
-{
-};
-void *first_thread_void(void *args)
-{
-    printf("WATEK 1\n");
-    return EXIT_SUCCESS;
-}
-void *second_thread_void(void *args)
-{
-    printf("WATEK 2\n");
-    return EXIT_SUCCESS;
+    std::string res = "";
+    for (int i = 0; i < LIST.size(); i++)
+    {
+        res += "[" + std::to_string(LIST[i].processid) + ", " + std::to_string(LIST[i].lamportClock) + "] ";
+    }
+    return res;
 }
 
 void inicjuj(int argc, char **argv)
@@ -92,18 +83,17 @@ void inicjuj(int argc, char **argv)
     MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
     MPI_Type_commit(&mpiLamportPacket);
 
-    // int size, rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
+
     srand(rank);
 
     touristCount = size;
     if (argc != 7)
     {
-        // dałem turystów na 20
         ponyCostumes = 2;
-        submarineCount = 5;
+        lodzCount = 1;
         touristRangeFrom = 1;
         touristRangeTo = 3;
         submarineRangeFrom = 3;
@@ -112,53 +102,69 @@ void inicjuj(int argc, char **argv)
     else
     {
         ponyCostumes = atoi(argv[1]);
-        submarineCount = atoi(argv[2]);
+        lodzCount = atoi(argv[2]);
         touristRangeFrom = atoi(argv[3]);
         touristRangeTo = atoi(argv[4]);
         submarineRangeFrom = atoi(argv[5]);
         submarineRangeTo = atoi(argv[6]);
     }
     // int touristCount = size;
-    int tourists[touristCount];
-    int submarines[submarineCount];
 
     if (rank == ROOT)
     {
-
         //inicjalizacja wszystkiego
-        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, submarineCount);
+        printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, lodzCount);
         printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
         printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
         //inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
         {
-            tourists[i] = getRandom(touristRangeFrom, touristRangeTo);
+            tourists.push_back(getRandom(touristRangeFrom, touristRangeTo));
         }
 
         //inicjalizacja łodzi
-        for (int i = 0; i < submarineCount; i++)
+        for (int i = 0; i < lodzCount; i++)
         {
-            submarines[i] = getRandom(submarineRangeFrom, submarineRangeTo);
+            submarines.push_back(getRandom(submarineRangeFrom, submarineRangeTo));
         }
 
         //wysłanie danych do wszystkich procesów
-        for (int i = 0; i < size; i++)
+        for (int i = 1; i < size; i++)
         {
-            MPI_Send(tourists, touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
-            MPI_Send(submarines, submarineCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
+            // double* touristsArray = &v[0];
+            MPI_Send(tourists.data(), touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
+            MPI_Send(submarines.data(), lodzCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
         }
         // debug("jestem");
     }
 
     //każdy proces odbiera dane
-    MPI_Recv(tourists, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-    MPI_Recv(submarines, submarineCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+    if (rank != ROOT)
+    {
+        int touristsArray[touristCount];
+        int submarinesArray[lodzCount];
 
-    // printArray(&rank, tourists, &touristCount, "turysci");
-    // printArray(&rank, submarines, &submarineCount, "lodzie");
+        MPI_Recv(touristsArray, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(submarinesArray, lodzCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+        tourists = std::vector<int>(touristsArray, touristsArray + touristCount);
+        submarines = std::vector<int>(submarinesArray, submarinesArray + lodzCount);
+
+        // tourists.insert(tourists.begin(), std::begin(touristsArray), std::end(touristsArray));
+        // submarines.insert(sumbarines.begin(), std::begin(submarinesArray), std::end(submarinesArray));
+        printArray(&rank, tourists.data(), touristCount, "turysci");
+        printArray(&rank, submarines.data(), lodzCount, "lodzie");
+    }
 
     pthread_create(&threadKom, NULL, startKomWatek, NULL);
+
+    for (int i = 0; i < size; i++)
+    {
+        touristsId.push_back(i);
+    }
+
+    wybieranaLodz = 0;
 }
 
 void finalizuj()

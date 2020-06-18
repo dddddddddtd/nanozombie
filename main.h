@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 
+
 /* odkomentować, jeżeli się chce DEBUGI */
 #define DEBUG
 /* boolean */
@@ -29,11 +30,13 @@
 typedef enum
 {
     Inactive,
-    PonyWait,
-    PonyQ,
-    SubQ,
-    Trip,
-    Pony
+    KucykWait,
+    KucykQ,
+    LodzQ,
+    Wycieczka,
+    Kucyk,
+    LodzWait,
+    Ending
 } state_t;
 extern state_t stan;
 extern int rank;
@@ -41,8 +44,9 @@ extern int size;
 
 //zmienne dla każdego procesu
 
-extern int touristCount, ponyCostumes, submarineCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
-extern int ponyACKcount;
+extern int touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
+extern int kucykACKcount, lodzACKcount;
+extern int wybieranaLodz;
 
 class Request
 {
@@ -67,7 +71,11 @@ public:
 };
 
 extern std::vector<Request> LISTkucyk;
-extern std::vector<int> LISTkucykHALT;
+extern std::vector<Request> LISTlodz;
+extern std::vector<int> touristsId;
+extern std::vector<int> tourists;
+extern std::vector<int> submarines;
+
 
 /* to może przeniesiemy do global... */
 typedef struct
@@ -128,5 +136,6 @@ void changeState(state_t);
 
 void lamportSend(std::vector<int> receivers, int tag, int *lamportClock);
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock);
+std::string stringLIST(std::vector<Request> LIST);
 
 #endif
