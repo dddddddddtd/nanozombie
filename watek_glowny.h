@@ -8,13 +8,13 @@ void mainLoop()
         {
             waitFor(0, 10, "zanim zaczne ubiegac sie o kucyka");
 
-            debug("Ubiegam się o kostium kucyka: moj lamport = %d", lamportClock + 1);
+            debug("Ubiegam się o kostium kucyka");
             kucykACKcount = 0;
             changeState(KucykWait);
-            lamportSend(touristsId, REQkucyk, &lamportClock);
-
-            debug("Czekam na zgody na kucyka");
+            lamportPacket packetOut;
+            lamportSend(touristsId, REQkucyk, &lamportClock, packetOut);
         }
+
         if (stan == KucykWait)
         {
         }
@@ -24,9 +24,9 @@ void mainLoop()
             //
             std::sort(LISTkucyk.begin(), LISTkucyk.end());
             int index = std::distance(LISTkucyk.begin(), std::find(LISTkucyk.begin(), LISTkucyk.end(), rank));
-            if (index < ponyCostumes - 1)
+            if (index < ponyCostumes)
             {
-                debug("kucyk: %s", stringLIST(LISTkucyk).c_str());
+                debug("biore stroj kucyka");
                 changeState(Kucyk);
             }
             //
@@ -34,11 +34,11 @@ void mainLoop()
 
         if (stan == Kucyk)
         {
-            debug("otrzymałem kucyka, ubiegam się o łódź");
+            debug("ubiegam się o łódź");
             lodzACKcount = 0;
             changeState(LodzWait);
-            lamportSend(touristsId, REQlodz, &lamportClock);
-            debug("Czekam na potwierdzenia o lodzi kucyka");
+            lamportPacket packetOut;
+            lamportSend(touristsId, REQlodz, &lamportClock, packetOut);
         }
 
         if (stan == LodzWait)
@@ -49,52 +49,68 @@ void mainLoop()
         {
             if (LISTlodz.size() >= ponyCostumes)
             {
-                //if (lodzie[wybieranaLodz]!=0)
-                std::sort(LISTlodz.begin(), LISTlodz.end());
-                int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
-                if (index == 0)
+                if (lodzieStan[wybieranaLodz] != 0)
                 {
-                    std::vector<int> wycieczka;
-                    int suma = 0;
-                    for (int i = 0; i < LISTlodz.size(); i++)
+                    std::sort(LISTlodz.begin(), LISTlodz.end());
+                    int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
+                    if (index == 0)
                     {
-                        suma += tourists[LISTlodz[i].processid];
-
-                        if (suma < submarines[wybieranaLodz])
+                        debug("jestem pierwszy w kolejce do lodzi");
+                        wycieczka.clear();
+                        int suma = 0;
+                        for (int i = 0; i < LISTlodz.size(); i++)
                         {
-                            wycieczka.push_back(LISTlodz[i].processid)
+                            suma += tourists[LISTlodz[i].processid];
+
+                            if (suma <= lodziePojemnosc[wybieranaLodz])
+                            {
+                                wycieczka.push_back(LISTlodz[i].processid);
+                            }
+
+                            if (suma > lodziePojemnosc[wybieranaLodz])
+                            {
+                                suma -= tourists[LISTlodz[i].processid];
+                                continue;
+                            }
                         }
 
-                        if (suma > submarines[wybieranaLodz])
-                        {
-                            suma -= tourists[LISTlodz[i].processid];
-                            continue;
-                            // std::vector<int> test(touristsId.cbegin() + 0, touristsId.cbegin() + i - 1 + 1);
-                            // printArray(&rank, test.data(), (int)test.size(), "test");
-                            // break;
+                        lamportPacket packetOut;
+                        packetOut.count = wycieczka.size();
+                        packetOut.lodz = wybieranaLodz;
+                        debug("wysylam komunikat FULLlodz");
+                        lamportSend(touristsId, FULLlodz, &lamportClock, packetOut);
+                        for (int i = 0; i < size; i++)
+                        {   
+                            MPI_Send(wycieczka.data(), (int) wycieczka.size(), MPI_INT, i, DATA, MPI_COMM_WORLD);
                         }
-                    }
-
-                    lamportSend(touristsId, FULLlodz, &lamportClock);
-                    for (int i = 0; i < size; i++)
-                    {
-                        MPI_Send(wycieczka.data(), wycieczka.size(), MPI_INT, i, INIT, MPI_COMM_WORLD);
+                        debug("zmieniam stan na wycieczke");
+                        nadzorca=rank;
+                        changeState(Wycieczka);
                     }
                 }
+                else{
+                    wybieranaLodz = (wybieranaLodz + 1) % lodzCount;
+                }
             }
-
-            //sprawdzenie czy w turysci w kolejce turystow sa w stanie wypelnic jedna lodz
         }
 
-        if (stan == Ending)
+        if (stan == Wycieczka)
         {
-            waitFor(2, 10, "mam kucyka");
-
-            // std::vector<int> receivers;
-            // for (int i = 0; i < size; i++)
-            //     receivers.push_back(i);
-
-            lamportSend(touristsId, RELkucyk, &lamportClock);
+            if (nadzorca == rank)
+            {
+                std::string test = "wyplywam razem z [";
+                for (int i = 0; i < wycieczka.size(); i++)
+                {
+                    test += std::to_string(wycieczka[i]) + ", ";
+                }
+                test = test.substr(0, test.size() - 2);
+                test += "]";
+                waitFor(5, 10, test.c_str());
+                lamportPacket packetOut;
+                debug("wysylam RELlodz: %d size: %d", RELlodz, (int) touristsId.size());
+                lamportSend(touristsId, RELlodz, &lamportClock, packetOut);
+                changeState(Inactive);
+            }
         }
     }
 }

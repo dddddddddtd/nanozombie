@@ -3,21 +3,14 @@
 #include "watek_komunikacyjny.h"
 #include "watek_glowny.h"
 
-#define ROOT 0
-
-//mozliwe ze to niepotrzebne
-#define INIT 1
-#define MESSAGE_TAG 2
-
-// #define MESSAGE_SIZE 16
-
 // zmienne extern
 int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
 int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
+int nadzorca;
 
 std::vector<Request> LISTkucyk, LISTlodz;
-std::vector<int> tourists, submarines, touristsId;
+std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;
 
 // mutex stan
 pthread_t threadKom;
@@ -28,9 +21,8 @@ state_t stan = Inactive;
 // rzeczy lamporta
 MPI_Datatype mpiLamportPacket;
 
-void lamportSend(std::vector<int> receivers, int tag, int *lamportClock)
-{
-    lamportPacket packetOut;
+void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packetOut)
+{    
     packetOut.lamportClock = *lamportClock + 1;
     pthread_mutex_lock(&lamportMut);
     *lamportClock++;
@@ -68,6 +60,16 @@ std::string stringLIST(std::vector<Request> LIST)
     return res;
 }
 
+bool checkIfInArray(int a[], int size, int val)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (a[i] == val)
+            return true;
+    }
+    return false;
+}
+
 void inicjuj(int argc, char **argv)
 {
     int provided;
@@ -75,12 +77,14 @@ void inicjuj(int argc, char **argv)
     // check_thread_support(provided);
 
     // konfiguracja structa dla MPI
-    MPI_Datatype types[2] = {MPI_INT, MPI_INT};
-    int blocklengths[2] = {1, 1};
-    MPI_Aint offsets[2];
+    MPI_Datatype types[4] = {MPI_INT, MPI_INT, MPI_INT, MPI_INT};
+    int blocklengths[4] = {1, 1, 1, 1,};
+    MPI_Aint offsets[4];
     offsets[0] = offsetof(lamportPacket, lamportClock);
     offsets[1] = offsetof(lamportPacket, src);
-    MPI_Type_create_struct(2, blocklengths, offsets, types, &mpiLamportPacket);
+    offsets[2] = offsetof(lamportPacket, count);
+    offsets[3] = offsetof(lamportPacket, lodz);
+    MPI_Type_create_struct(4, blocklengths, offsets, types, &mpiLamportPacket);
     MPI_Type_commit(&mpiLamportPacket);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -92,12 +96,12 @@ void inicjuj(int argc, char **argv)
     touristCount = size;
     if (argc != 7)
     {
-        ponyCostumes = 2;
+        ponyCostumes = 4;
         lodzCount = 1;
         touristRangeFrom = 1;
         touristRangeTo = 3;
         submarineRangeFrom = 3;
-        submarineRangeTo = 10;
+        submarineRangeTo = 8;
     }
     else
     {
@@ -126,15 +130,15 @@ void inicjuj(int argc, char **argv)
         //inicjalizacja łodzi
         for (int i = 0; i < lodzCount; i++)
         {
-            submarines.push_back(getRandom(submarineRangeFrom, submarineRangeTo));
+            lodziePojemnosc.push_back(getRandom(submarineRangeFrom, submarineRangeTo));
         }
 
         //wysłanie danych do wszystkich procesów
         for (int i = 1; i < size; i++)
         {
             // double* touristsArray = &v[0];
-            MPI_Send(tourists.data(), touristCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
-            MPI_Send(submarines.data(), lodzCount, MPI_INT, i, INIT, MPI_COMM_WORLD);
+            MPI_Send(tourists.data(), touristCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
+            MPI_Send(lodziePojemnosc.data(), lodzCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
         }
         // debug("jestem");
     }
@@ -145,16 +149,16 @@ void inicjuj(int argc, char **argv)
         int touristsArray[touristCount];
         int submarinesArray[lodzCount];
 
-        MPI_Recv(touristsArray, touristCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        MPI_Recv(submarinesArray, lodzCount, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(touristsArray, touristCount, MPI_INT, 0, DATA, MPI_COMM_WORLD, &status);
+        MPI_Recv(submarinesArray, lodzCount, MPI_INT, 0, DATA, MPI_COMM_WORLD, &status);
 
         tourists = std::vector<int>(touristsArray, touristsArray + touristCount);
-        submarines = std::vector<int>(submarinesArray, submarinesArray + lodzCount);
+        lodziePojemnosc = std::vector<int>(submarinesArray, submarinesArray + lodzCount);
 
         // tourists.insert(tourists.begin(), std::begin(touristsArray), std::end(touristsArray));
         // submarines.insert(sumbarines.begin(), std::begin(submarinesArray), std::end(submarinesArray));
         printArray(&rank, tourists.data(), touristCount, "turysci");
-        printArray(&rank, submarines.data(), lodzCount, "lodzie");
+        printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
     }
 
     pthread_create(&threadKom, NULL, startKomWatek, NULL);
@@ -164,7 +168,9 @@ void inicjuj(int argc, char **argv)
         touristsId.push_back(i);
     }
 
+    lodzieStan = std::vector<int>(lodzCount, 1);
     wybieranaLodz = 0;
+    nadzorca = -1;
 }
 
 void finalizuj()

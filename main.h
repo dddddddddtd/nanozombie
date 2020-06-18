@@ -13,16 +13,11 @@
 #include <vector>
 #include <algorithm>
 
-
 /* odkomentować, jeżeli się chce DEBUGI */
 #define DEBUG
 /* boolean */
 #define TRUE 1
 #define FALSE 0
-
-/* używane w wątku głównym, determinuje jak często i na jak długo zmieniają się stany */
-#define STATE_CHANGE_PROB 50
-#define SEC_IN_STATE 2
 
 #define ROOT 0
 
@@ -47,6 +42,7 @@ extern int size;
 extern int touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
 extern int kucykACKcount, lodzACKcount;
 extern int wybieranaLodz;
+extern int nadzorca;
 
 class Request
 {
@@ -74,14 +70,17 @@ extern std::vector<Request> LISTkucyk;
 extern std::vector<Request> LISTlodz;
 extern std::vector<int> touristsId;
 extern std::vector<int> tourists;
-extern std::vector<int> submarines;
-
+extern std::vector<int> lodziePojemnosc;
+extern std::vector<int> lodzieStan; //0 - wyplynela, 1 - oczekuje
+extern std::vector<int> wycieczka;
 
 /* to może przeniesiemy do global... */
 typedef struct
 {
     int lamportClock;
     int src;
+    int count;
+    int lodz;
 } lamportPacket;
 extern MPI_Datatype mpiLamportPacket;
 
@@ -93,6 +92,7 @@ extern MPI_Datatype mpiLamportPacket;
 #define ACKlodz 5
 #define RELlodz 6
 #define FULLlodz 7
+#define DATA 8
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
@@ -134,8 +134,10 @@ extern MPI_Datatype mpiLamportPacket;
 /* wysyłanie pakietu, skrót: wskaźnik do pakietu (0 oznacza stwórz pusty pakiet), do kogo, z jakim typem */
 void changeState(state_t);
 
-void lamportSend(std::vector<int> receivers, int tag, int *lamportClock);
+void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packet);
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock);
 std::string stringLIST(std::vector<Request> LIST);
+bool checkIfInArray(int a[], int size, int val);
+
 
 #endif

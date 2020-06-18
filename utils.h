@@ -11,9 +11,10 @@ int max(int a, int b)
     return a > b ? a : b;
 }
 
-int getRandom(int lower, int upper)
+double getRandom(int lower, int upper)
 {
-    return rand() % (upper - lower + 1) + lower;
+    // return rand() % (upper - lower + 1) + lower;
+    return ((double)rand() / (RAND_MAX)) * 10.0;
 }
 
 void waitFor(int a, int b, const char *text)
@@ -21,7 +22,7 @@ void waitFor(int a, int b, const char *text)
     double t1, t2;
     t1 = MPI_Wtime();
     t2 = MPI_Wtime();
-    double waittime = (double) getRandom(a, b);
+    double waittime = (double)getRandom(a, b);
     debug("%s - wylosowalem czas: %f", text, waittime);
     while (t2 - t1 < waittime)
     {
