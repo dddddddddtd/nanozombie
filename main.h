@@ -45,6 +45,7 @@ extern int kucykACKcount, lodzACKcount;
 extern int wybieranaLodz;
 extern int nadzorca;
 extern bool signalhandler;
+extern int turysciWycieczka;
 
 class Request
 {

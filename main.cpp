@@ -9,6 +9,7 @@ int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
 int nadzorca;
 bool signalhandler = false;
+int turysciWycieczka = 0;
 
 std::vector<Request> LISTkucyk, LISTlodz;
 std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;

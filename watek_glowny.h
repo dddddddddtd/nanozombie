@@ -41,7 +41,7 @@ void mainLoop()
         {
             if (lodzieStan[wybieranaLodz] != 0) // jeżeli wybierana lodz jest dostepna
             {
-                if (LISTlodz.size() >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
+                if (LISTlodz.size() + turysciWycieczka >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
                 {
 
                     std::sort(LISTlodz.begin(), LISTlodz.end());
@@ -100,6 +100,7 @@ void mainLoop()
                 waitFor(test.c_str()); // odczekanie losowo wyznaczonego czasu i wypisaniu komunikatu, kto z tym turystą płynie
                 lamportPacket packetOut;
                 packetOut.lodz = wybieranaLodz;
+                debug("wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELlodz, &lamportClock, packetOut);  // po odczekaniu, wysłanie komunikatu RELlodz
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // wysłanie komunikatu RELkucyk
                 changeState(Inactive);                                       // powrot do pierwszego stanu
