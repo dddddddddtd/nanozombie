@@ -17,10 +17,12 @@ void *startKomWatek(void *)
         // obsługa wiadomości o różnych tagach
         switch (status.MPI_TAG)
         {
-
         // obsługa REQkucyk
         case REQkucyk:
-            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock));                    // dodanie żądania do kolejki związanej ze strojami kucyka
+            pthread_mutex_lock(&kucykMut);
+            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej ze strojami kucyka
+            debug("REQkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
+            pthread_mutex_unlock(&kucykMut);
             lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
             break;
 
@@ -35,7 +37,10 @@ void *startKomWatek(void *)
 
         // obsługa RELkucyk
         case RELkucyk:
+            pthread_mutex_lock(&kucykMut);
             LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
+            debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
+            pthread_mutex_unlock(&kucykMut);
             turysciWycieczka--;
             break;
 
@@ -50,7 +55,6 @@ void *startKomWatek(void *)
             lodzACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących łodzi
             if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
-                debug("kolejka do kucyka: %s, liczba strojow = %d", stringLIST(LISTkucyk).c_str(), ponyCostumes);
                 changeState(LodzQ); //zmiana stanu na LodzQ
             }
             break;
@@ -86,15 +90,15 @@ void *startKomWatek(void *)
                 debug("jade na wycieczke z %d", nadzorca);
             }
 
-             // zmiana stanu łodzi na wypłyniętą
+            // zmiana stanu łodzi na wypłyniętą
 
             // usuwa turystów odplywajacych z listy oczekujących na łódź
+            debug("przed usunieciem FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
             for (int i = 0; i < liczbaodplywajacych; i++)
             {
                 LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
             }
-            
-
+            debug("po usunieciu FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
             turysciWycieczka += liczbaodplywajacych;
             break;
         }

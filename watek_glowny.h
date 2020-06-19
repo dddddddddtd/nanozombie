@@ -21,11 +21,14 @@ void mainLoop()
 
         if (stan == KucykQ) // stan oczekiwania, aż proces będzie wśród ponyCostumes pierwszych procesów w kolejce dotyczącej kostiumu kucyka
         {
+            pthread_mutex_lock(&kucykMut);
             std::sort(LISTkucyk.begin(), LISTkucyk.end());
             int index = std::distance(LISTkucyk.begin(), std::find(LISTkucyk.begin(), LISTkucyk.end(), rank));
+            pthread_mutex_unlock(&kucykMut);
+            
             if (index < ponyCostumes)
             {
-                debug("biore stroj kucyka i ubiegam sie o łódź");
+                debug("biore stroj kucyka i ubiegam sie o łódź z kolejka: %s", stringLIST(LISTkucyk).c_str());
                 lodzACKcount = 0;
                 changeState(LodzWait); // zmiana stanu na LodzWait
                 lamportPacket packetOut;

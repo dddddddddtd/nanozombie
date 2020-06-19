@@ -17,6 +17,9 @@ std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;
 pthread_t threadKom;
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t kucykMut = PTHREAD_MUTEX_INITIALIZER;
+
 state_t stan = Inactive;
 
 // lamport

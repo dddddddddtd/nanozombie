@@ -76,6 +76,8 @@ extern std::vector<int> lodziePojemnosc; //wektor przechowujący maksymalną zaj
 extern std::vector<int> lodzieStan;      //0 - wyplynela, 1 - oczekuje
 extern std::vector<int> wycieczka;       //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
+extern pthread_mutex_t kucykMut;
+
 /* to może przeniesiemy do global... */
 typedef struct
 {
