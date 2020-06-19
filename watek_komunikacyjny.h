@@ -50,6 +50,7 @@ void *startKomWatek(void *)
             lodzACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących łodzi
             if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
+                debug("kolejka do kucyka: %s, liczba strojow = %d", stringLIST(LISTkucyk).c_str(), ponyCostumes);
                 changeState(LodzQ); //zmiana stanu na LodzQ
             }
             break;
