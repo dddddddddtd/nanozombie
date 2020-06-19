@@ -39,10 +39,11 @@ void mainLoop()
 
         if (stan == LodzQ)
         {
-            if (LISTlodz.size() >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
+            if (lodzieStan[wybieranaLodz] != 0) // jeżeli wybierana lodz jest dostepna
             {
-                if (lodzieStan[wybieranaLodz] != 0) // jeżeli wybierana lodz jest dostepna
+                if (LISTlodz.size() >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
                 {
+
                     std::sort(LISTlodz.begin(), LISTlodz.end());
                     int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
                     if (index == 0) // jeżeli proces znajduje się na pierwszym miejscu kolejki żądań o łódź
@@ -78,10 +79,10 @@ void mainLoop()
                         changeState(Wycieczka);
                     }
                 }
-                else
-                {
-                    wybieranaLodz = (wybieranaLodz + 1) % lodzCount; // zmiana numeru wybieranej łodzi, jeśli obecnie wybierana nie jest w stanie oczekiwania
-                }
+            }
+            else
+            {
+                wybieranaLodz = (wybieranaLodz + 1) % lodzCount; // zmiana numeru wybieranej łodzi, jeśli obecnie wybierana nie jest w stanie oczekiwania
             }
         }
 
@@ -99,10 +100,10 @@ void mainLoop()
                 waitFor(test.c_str()); // odczekanie losowo wyznaczonego czasu i wypisaniu komunikatu, kto z tym turystą płynie
                 lamportPacket packetOut;
                 packetOut.lodz = wybieranaLodz;
-                lamportSend(touristsId, RELlodz, &lamportClock, packetOut); // po odczekaniu, wysłanie komunikatu RELlodz
+                lamportSend(touristsId, RELlodz, &lamportClock, packetOut);  // po odczekaniu, wysłanie komunikatu RELlodz
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // wysłanie komunikatu RELkucyk
-                changeState(Inactive);                                      // powrot do pierwszego stanu
-                nadzorca =-1;
+                changeState(Inactive);                                       // powrot do pierwszego stanu
+                nadzorca = -1;
             }
         }
 
