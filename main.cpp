@@ -106,7 +106,7 @@ void inicjuj(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
 
-    srand(time(NULL) + rank);
+    srand(time(NULL) * rank);
 
     touristCount = size;
     if (argc != 7) // w razie brakujących argumentów - wartości domyślne
