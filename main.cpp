@@ -8,7 +8,6 @@ int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, tourist
 int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
 int nadzorca;
-bool signalhandler = false;
 int turysciWycieczka = 0;
 
 std::vector<Request> LISTkucyk, LISTlodz;
