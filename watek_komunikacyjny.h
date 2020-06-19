@@ -21,16 +21,18 @@ void *startKomWatek(void *)
         case REQkucyk:
             pthread_mutex_lock(&kucykMut);
             LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej ze strojami kucyka
-            debug("REQkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
+            // debug("REQkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
             lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
             break;
 
         // obsługa ACKkucyk
         case ACKkucyk:
-            kucykACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+            kucykACKcount++; // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+            debug("ACKkucyk od %d, mam zgod %d/%d", status.MPI_SOURCE, kucykACKcount, touristCount);
             if (kucykACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
+                debug("ACKkucyk mam zgod %d/%d: %s", kucykACKcount, touristCount, stringLIST(LISTkucyk).c_str());
                 changeState(KucykQ); //zmiana stanu na KucykQ
             }
             break;
@@ -39,7 +41,7 @@ void *startKomWatek(void *)
         case RELkucyk:
             pthread_mutex_lock(&kucykMut);
             LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
-            debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
+            // debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
             turysciWycieczka--;
             break;
@@ -65,7 +67,6 @@ void *startKomWatek(void *)
 
             if (nadzorca == status.MPI_SOURCE && rank != nadzorca) // jeśli brał udział w wycieczce nadawcy
             {
-
                 debug("wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
                 changeState(Inactive);                                       // zmienia stan na poczatkowy
@@ -81,8 +82,9 @@ void *startKomWatek(void *)
             int odplywajace[liczbaodplywajacych];
 
             // odebranie listy turystów odpływających bez zwiększania zegaru Lamporta (jako część obsługi zdarzenia FULLlodz)
+            debug("przed odebraniem odplywajacych");
             MPI_Recv(odplywajace, liczbaodplywajacych, MPI_INT, MPI_ANY_SOURCE, DATA, MPI_COMM_WORLD, &status);
-
+            debug("po odebraniem odplywajacych");
             if (checkIfInArray(odplywajace, liczbaodplywajacych, rank) && status.MPI_SOURCE != rank) // jeśli turysta odpływa tą łodzią
             {
                 nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
@@ -93,12 +95,12 @@ void *startKomWatek(void *)
             // zmiana stanu łodzi na wypłyniętą
 
             // usuwa turystów odplywajacych z listy oczekujących na łódź
-            debug("przed usunieciem FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
+            // debug("przed usunieciem FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
             for (int i = 0; i < liczbaodplywajacych; i++)
             {
                 LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
             }
-            debug("po usunieciu FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
+            // debug("po usunieciu FULLlodz od %d: %s", status.MPI_SOURCE, stringLIST(LISTlodz).c_str());
             turysciWycieczka += liczbaodplywajacych;
             break;
         }
