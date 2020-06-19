@@ -72,7 +72,7 @@ void *startKomWatek(void *)
         case FULLlodz:
         {
             int liczbaodplywajacych = packet.count;
-            int lodz = packet.lodz;
+            lodzieStan[packet.lodz] = 0;
             int odplywajace[liczbaodplywajacych];
 
             // odebranie listy turystów odpływających bez zwiększania zegaru Lamporta (jako część obsługi zdarzenia FULLlodz)
@@ -85,7 +85,7 @@ void *startKomWatek(void *)
                 debug("jade na wycieczke z %d", nadzorca);
             }
 
-            lodzieStan[lodz] = 0; // zmiana stanu łodzi na wypłyniętą
+             // zmiana stanu łodzi na wypłyniętą
 
             // usuwa turystów odplywajacych z listy oczekujących na łódź
             for (int i = 0; i < liczbaodplywajacych; i++)

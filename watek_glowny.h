@@ -39,14 +39,13 @@ void mainLoop()
 
         if (stan == LodzQ)
         {
-            if (lodzieStan[wybieranaLodz] != 0) // jeżeli wybierana lodz jest dostepna
+            std::sort(LISTlodz.begin(), LISTlodz.end());
+            int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
+            if (index == 0) // jeżeli proces znajduje się na pierwszym miejscu kolejki żądań o łódź
             {
-                if (LISTlodz.size() + turysciWycieczka >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
+                if (lodzieStan[wybieranaLodz] != 0) // jeżeli wybierana lodz jest dostepna
                 {
-
-                    std::sort(LISTlodz.begin(), LISTlodz.end());
-                    int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
-                    if (index == 0) // jeżeli proces znajduje się na pierwszym miejscu kolejki żądań o łódź
+                    if (LISTlodz.size() + turysciWycieczka >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
                     {
                         wycieczka.clear();
                         int suma = 0;
@@ -79,10 +78,10 @@ void mainLoop()
                         changeState(Wycieczka);
                     }
                 }
-            }
-            else
-            {
-                wybieranaLodz = (wybieranaLodz + 1) % lodzCount; // zmiana numeru wybieranej łodzi, jeśli obecnie wybierana nie jest w stanie oczekiwania
+                else
+                {
+                    wybieranaLodz = (wybieranaLodz + 1) % lodzCount; // zmiana numeru wybieranej łodzi, jeśli obecnie wybierana nie jest w stanie oczekiwania
+                }
             }
         }
 
