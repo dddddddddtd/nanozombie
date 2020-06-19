@@ -11,18 +11,22 @@ int max(int a, int b)
     return a > b ? a : b;
 }
 
-double getRandom(int lower, int upper)
+double getRandomTime() // losowanie czasu z zakresu <3, 7>
 {
-    // return rand() % (upper - lower + 1) + lower;
-    return ((double)rand() / (RAND_MAX)) * 10.0;
+    return (((double)rand() / (RAND_MAX)) * 4.0) + 3.0;
 }
 
-void waitFor(int a, int b, const char *text)
+int getRandom(int lower, int upper) // losowanie inta z zakresu <lower, upper>
+{
+    return rand() % (upper - lower + 1) + lower;
+}
+
+void waitFor(const char *text) // oczekiwanie losowego czasu z wypisaniem tekstu przekazanego jako argument
 {
     double t1, t2;
     t1 = MPI_Wtime();
     t2 = MPI_Wtime();
-    double waittime = (double)getRandom(a, b);
+    double waittime = getRandomTime();
     debug("%s - wylosowalem czas: %f", text, waittime);
     while (t2 - t1 < waittime)
     {
@@ -30,7 +34,7 @@ void waitFor(int a, int b, const char *text)
     }
 }
 
-void printArray(int *rank, int array[], int count, std::string title)
+void printArray(int *rank, int array[], int count, std::string title) // funkcja pomocnicza do tworzenia stringa z tablicy intów
 {
     std::string result = "";
     result += std::to_string(*rank) + ": " + title + " : [";

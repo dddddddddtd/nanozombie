@@ -12,6 +12,8 @@
 #include <time.h>
 #include <vector>
 #include <algorithm>
+#include <csignal>
+#include <signal.h>
 
 /* odkomentować, jeżeli się chce DEBUGI */
 #define DEBUG
@@ -29,7 +31,6 @@ typedef enum
     KucykQ,
     LodzQ,
     Wycieczka,
-    Kucyk,
     LodzWait,
     Ending
 } state_t;
@@ -43,6 +44,7 @@ extern int touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRange
 extern int kucykACKcount, lodzACKcount;
 extern int wybieranaLodz;
 extern int nadzorca;
+extern bool signalhandler;
 
 class Request
 {
@@ -68,11 +70,11 @@ public:
 
 extern std::vector<Request> LISTkucyk;
 extern std::vector<Request> LISTlodz;
-extern std::vector<int> touristsId;
-extern std::vector<int> tourists;
-extern std::vector<int> lodziePojemnosc;
+extern std::vector<int> touristsId; //wektor przechowujący id wszystkich procesów (używany, gdy wysyłamy komunikat do wszystkich procesów)
+extern std::vector<int> tourists;   //wektor przechowujący stopień zajętości łodzi przez każdego z turystów
+extern std::vector<int> lodziePojemnosc;    //wektor przechowujący maksymalną zajętość łodzi
 extern std::vector<int> lodzieStan; //0 - wyplynela, 1 - oczekuje
-extern std::vector<int> wycieczka;
+extern std::vector<int> wycieczka;  //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
 /* to może przeniesiemy do global... */
 typedef struct
@@ -85,14 +87,14 @@ typedef struct
 extern MPI_Datatype mpiLamportPacket;
 
 /* Typy wiadomości */
-#define REQkucyk 1
-#define ACKkucyk 2
-#define RELkucyk 3
-#define REQlodz 4
-#define ACKlodz 5
-#define RELlodz 6
-#define FULLlodz 7
-#define DATA 8
+#define REQkucyk 1  //żądanie stroju kucyka
+#define ACKkucyk 2  //potwierdzenie odebrania żądania stroju kucyka
+#define RELkucyk 3  //zwolnienie stroju kucyka
+#define REQlodz 4   //żądanie miejsca w łodzi podwodnej
+#define ACKlodz 5   //potwierdzenie
+#define RELlodz 6   //zwolnienie
+#define FULLlodz 7  //wypłynięcie łodzi
+#define DATA 8      //służy do przesyłania tablic
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 

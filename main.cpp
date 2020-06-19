@@ -8,41 +8,49 @@ int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, tourist
 int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
 int nadzorca;
+bool signalhandler = false;
 
 std::vector<Request> LISTkucyk, LISTlodz;
 std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;
 
-// mutex stan
+// wątek komunikacyjny, mutexy i stan
 pthread_t threadKom;
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 state_t stan = Inactive;
 
-// rzeczy lamporta
+// lamport
 MPI_Datatype mpiLamportPacket;
 
+// wysyłanie komunikatów
 void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packetOut)
-{    
-    packetOut.lamportClock = *lamportClock + 1;
+{
+    //zwiększenie wartości zegaru Lamporta i wpisanie jej do pakietu
     pthread_mutex_lock(&lamportMut);
-    *lamportClock++;
+    (*lamportClock)++;
+    packetOut.lamportClock = *lamportClock;
     pthread_mutex_unlock(&lamportMut);
 
+    // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
     for (int i = 0; i < receivers.size(); i++)
     {
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
     }
 }
 
+// odbieranie komunikatów
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
+
+    //zwiększenie wartości zegaru Lamporta po odebraniu
     pthread_mutex_lock(&lamportMut);
     *lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
     pthread_mutex_unlock(&lamportMut);
     return result;
 }
 
+// zmiana stanu
 void changeState(state_t newState)
 {
     pthread_mutex_lock(&stateMut);
@@ -50,6 +58,7 @@ void changeState(state_t newState)
     pthread_mutex_unlock(&stateMut);
 }
 
+// funkcja pomocnicza do wypisywania zawartości kolejek
 std::string stringLIST(std::vector<Request> LIST)
 {
     std::string res = "";
@@ -60,6 +69,7 @@ std::string stringLIST(std::vector<Request> LIST)
     return res;
 }
 
+// funkcja pomocnicza sprawdzająca, czy id danego procesu znajduje sie w tablicy a o rozmiarze size
 bool checkIfInArray(int a[], int size, int val)
 {
     for (int i = 0; i < size; i++)
@@ -78,7 +88,12 @@ void inicjuj(int argc, char **argv)
 
     // konfiguracja structa dla MPI
     MPI_Datatype types[4] = {MPI_INT, MPI_INT, MPI_INT, MPI_INT};
-    int blocklengths[4] = {1, 1, 1, 1,};
+    int blocklengths[4] = {
+        1,
+        1,
+        1,
+        1,
+    };
     MPI_Aint offsets[4];
     offsets[0] = offsetof(lamportPacket, lamportClock);
     offsets[1] = offsetof(lamportPacket, src);
@@ -91,17 +106,17 @@ void inicjuj(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
 
-    srand(rank);
+    srand(time(NULL) + rank);
 
     touristCount = size;
-    if (argc != 7)
+    if (argc != 7) // w razie brakujących argumentów - wartości domyślne
     {
-        ponyCostumes = 4;
-        lodzCount = 1;
-        touristRangeFrom = 1;
+        ponyCostumes = 2;
+        lodzCount = 2;
+        touristRangeFrom = 3;
         touristRangeTo = 3;
         submarineRangeFrom = 3;
-        submarineRangeTo = 8;
+        submarineRangeTo = 4;
     }
     else
     {
@@ -112,38 +127,38 @@ void inicjuj(int argc, char **argv)
         submarineRangeFrom = atoi(argv[5]);
         submarineRangeTo = atoi(argv[6]);
     }
-    // int touristCount = size;
 
     if (rank == ROOT)
     {
-        //inicjalizacja wszystkiego
+        // wypisanie ustalonych wartości
         printf("tourists: %d\nponyCostumes: %d\nsubmarines: %d\n", touristCount, ponyCostumes, lodzCount);
         printf("tourist range: %d-%d\n", touristRangeFrom, touristRangeTo);
         printf("submarine range: %d-%d\n", submarineRangeFrom, submarineRangeTo);
 
-        //inicjalizacja turystów
+        // inicjalizacja turystów
         for (int i = 0; i < touristCount; i++)
         {
             tourists.push_back(getRandom(touristRangeFrom, touristRangeTo));
         }
 
-        //inicjalizacja łodzi
+        // inicjalizacja łodzi
         for (int i = 0; i < lodzCount; i++)
         {
             lodziePojemnosc.push_back(getRandom(submarineRangeFrom, submarineRangeTo));
         }
 
-        //wysłanie danych do wszystkich procesów
+        // wysłanie danych do wszystkich procesów
         for (int i = 1; i < size; i++)
         {
-            // double* touristsArray = &v[0];
             MPI_Send(tourists.data(), touristCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
             MPI_Send(lodziePojemnosc.data(), lodzCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
         }
-        // debug("jestem");
+
+        printArray(&rank, tourists.data(), touristCount, "turysci");
+        printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
     }
 
-    //każdy proces odbiera dane
+    // każdy proces odbiera dane
     if (rank != ROOT)
     {
         int touristsArray[touristCount];
@@ -154,46 +169,40 @@ void inicjuj(int argc, char **argv)
 
         tourists = std::vector<int>(touristsArray, touristsArray + touristCount);
         lodziePojemnosc = std::vector<int>(submarinesArray, submarinesArray + lodzCount);
-
-        // tourists.insert(tourists.begin(), std::begin(touristsArray), std::end(touristsArray));
-        // submarines.insert(sumbarines.begin(), std::begin(submarinesArray), std::end(submarinesArray));
-        printArray(&rank, tourists.data(), touristCount, "turysci");
-        printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
     }
 
+    // utworzenie wątku komunikacyjnego
     pthread_create(&threadKom, NULL, startKomWatek, NULL);
 
+    // wypełnienie wektora touristsId identyfikatorami procesów
     for (int i = 0; i < size; i++)
     {
         touristsId.push_back(i);
     }
 
-    lodzieStan = std::vector<int>(lodzCount, 1);
-    wybieranaLodz = 0;
+    lodzieStan = std::vector<int>(lodzCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
+    wybieranaLodz = 0;                           // ustawienie id wybieranej łodzi
     nadzorca = -1;
 }
 
 void finalizuj()
 {
-    //niszczenie mutexów
-    //łączenie wątków
+    //tu jakoś się musi dostać, mainLoop musi zostać przerwany i trzeba wysłać komunikat do wątku komunikacyjnego
+    //najlepiej obsłużyć sygnał ctrl+c
 
-    // pthread_mutex_destroy( &stateMut);
-    // /* Czekamy, aż wątek potomny się zakończy */
-    // println("czekam na wątek \"komunikacyjny\"\n" );
-    // pthread_join(threadKom,NULL);
-    // if (rank==0) pthread_join(threadMon,NULL);
-    // MPI_Type_free(&MPI_PAKIET_T);
+    pthread_mutex_destroy(&stateMut);
+    pthread_mutex_destroy(&lamportMut);
+
+    pthread_join(threadKom, NULL);
+    MPI_Type_free(&mpiLamportPacket);
     MPI_Finalize();
 }
 
 //program uruchamiany
-//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> /
-// <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
+//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
 int main(int argc, char **argv)
 {
     inicjuj(argc, argv);
-
     mainLoop();
     finalizuj();
 

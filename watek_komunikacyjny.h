@@ -1,113 +1,106 @@
 #include "main.h"
 
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
-void *startKomWatek(void *ptr)
+void *startKomWatek(void *)
 {
     MPI_Status status;
-    int is_message = FALSE;
-
-    std::string test;
 
     lamportPacket packet;
     lamportPacket packetOut;
+
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (1)
     {
-        //tu chyba recv nie bedzie dla dowolnych tagow, tylko bedziemy mieli switcha zaleznego od stanu procesu, gdzie dany case odbiera dane typy wiadomosci
-        // debug("czekam na wiadomosc");
-        lamportReceive(&packet, MPI_ANY_SOURCE, MPI_ANY_TAG, &status, &lamportClock);
-        // MPI_Recv(&packet, 1, mpiLamportPacket, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        // debug("otrzymalem wiadomosc o tagu: %d", status.MPI_TAG);
+        if (signalhandler == true)
+        { // zmiana stanu na Ending i zakończenie wątku komunikacyjnego
+            changeState(Ending);
+            break;
+        }
 
+        // odbiór dowolnej wiadomości
+        lamportReceive(&packet, MPI_ANY_SOURCE, MPI_ANY_TAG, &status, &lamportClock);
+
+        // obsługa wiadomości o różnych tagach
         switch (status.MPI_TAG)
         {
+
+        // obsługa REQkucyk
         case REQkucyk:
-            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock));
-            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock, packetOut);
+            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock));                    // dodanie żądania do kolejki związanej ze strojami kucyka
+            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
             break;
+
+        // obsługa ACKkucyk
         case ACKkucyk:
-            kucykACKcount++;
-            if (kucykACKcount == touristCount)
+            kucykACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+            if (kucykACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
-                changeState(KucykQ);
+                changeState(KucykQ); //zmiana stanu na KucykQ
             }
-            //zwieksza licznik zgod, jesli ten sie zgadza to odczekuje chwile i zmienia stan na SubQ chbya
             break;
+
+        // obsługa RELkucyk
         case RELkucyk:
-            LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end());
-            //tu w sumie nie wiem, jeszcze do przemyslenia bo nie wiem czy stany beda sie zmieniac i w komunikacyjnym i glownym chyba tak
+            LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
             break;
+
+        // obsługa REQlodz
         case REQlodz:
-            LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock));
-            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKlodz, &lamportClock, packetOut);
-            //wysyla ACKsub i dodaje proces do odpowiedniej listy
+            LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock));                    // dodanie żądania do kolejki związanej z łodziami
+            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKlodz, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKlodz
             break;
+
+        // obsługa ACKlodz
         case ACKlodz:
-            lodzACKcount++;
-            if (lodzACKcount == touristCount)
+            lodzACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących łodzi
+            if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
-                debug("%s", stringLIST(LISTlodz).c_str());
-                changeState(LodzQ);
+                changeState(LodzQ); //zmiana stanu na LodzQ
             }
-            //ehh w sumie trzeba sie bedzie zastanowic nad tym algorytmem bo jakis bez sensu mi sie wydaje xD
             break;
+
+        // obsługa RELlodz
         case RELlodz:
-            //trzeba jakos przekazac numer lodzi chyba
+            lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
 
-            //jesli bral udzial w wycieccze nadawcy
-            if (nadzorca == status.MPI_SOURCE)
+            if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy
             {
-                debug("wracam z wycieczki");
-                lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); //zwalnia kucyka
-                changeState(Inactive);                                       //zmienia stan na poczatkowy
-                nadzorca = -1;                                               //ustawia id nadzorcy na -1
+                debug("wracam z wycieczki, zwalniam stroj kucyka");
+                lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
+                changeState(Inactive);                                       // zmienia stan na poczatkowy
+                nadzorca = -1;                                               // ustawia id nadzorcy na -1
             }
-
-            lodzieStan[packet.lodz] = 1; //
             break;
+
+        // obsługa FULLlodz
         case FULLlodz:
         {
             int liczbaodplywajacych = packet.count;
             int lodz = packet.lodz;
             int odplywajace[liczbaodplywajacych];
 
+            // odebranie listy turystów odpływających bez zwiększania zegaru Lamporta (jako część obsługi zdarzenia FULLlodz)
             MPI_Recv(odplywajace, liczbaodplywajacych, MPI_INT, MPI_ANY_SOURCE, DATA, MPI_COMM_WORLD, &status);
 
-            // int odplywajace[liczbaodplywajacych];
-
-            test = "[";
-            for (int i = 0; i < liczbaodplywajacych; i++)
+            if (checkIfInArray(odplywajace, liczbaodplywajacych, rank) && status.MPI_SOURCE != rank) // jeśli turysta odpływa tą łodzią
             {
-                test += std::to_string(odplywajace[i]) + ", ";
-            }
-            test = test.substr(0, test.size() - 2);
-            test += "]";
-            debug("ci odplywaja: %s", test.c_str());
-
-
-            if (checkIfInArray(odplywajace, liczbaodplywajacych, rank))
-            {
-                nadzorca = status.MPI_SOURCE;
-                changeState(Wycieczka);
+                nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
+                changeState(Wycieczka);       // zmiana stanu na Wycieczka
                 debug("jade na wycieczke z %d", nadzorca);
             }
-            
 
-            //usuwa odplywajace z listy oczekujacych na lodz
+            lodzieStan[lodz] = 0; // zmiana stanu łodzi na wypłyniętą
+
+            // usuwa turystów odplywajacych z listy oczekujących na łódź
             for (int i = 0; i < liczbaodplywajacych; i++)
             {
                 LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
             }
-            //ustawia stan lodzi na wyplynela
-            lodzieStan[lodz] = 0;
-            //zmienia numer wybieranej lodzi na nastepny, nad tym chyba trzeba bedzie popracowac
-            // wybieranaLodz = (wybieranaLodz + 1) % lodzCount;
-
-            // jesli nalezy do odplywajacych lodzi
             break;
         }
         default:
             break;
         }
     }
+    return EXIT_SUCCESS;
 }
