@@ -63,8 +63,9 @@ void *startKomWatek(void *)
         case RELlodz:
             lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
 
-            if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy
+            if (nadzorca == status.MPI_SOURCE && rank != nadzorca) // jeśli brał udział w wycieczce nadawcy
             {
+
                 debug("wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
                 changeState(Inactive);                                       // zmienia stan na poczatkowy

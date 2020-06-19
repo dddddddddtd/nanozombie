@@ -100,7 +100,9 @@ void mainLoop()
                 lamportPacket packetOut;
                 packetOut.lodz = wybieranaLodz;
                 lamportSend(touristsId, RELlodz, &lamportClock, packetOut); // po odczekaniu, wysłanie komunikatu RELlodz
+                lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // wysłanie komunikatu RELkucyk
                 changeState(Inactive);                                      // powrot do pierwszego stanu
+                nadzorca =-1;
             }
         }
 
