@@ -43,6 +43,7 @@ void *startKomWatek(void *)
         case RELkucyk:
             LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
             turysciWycieczka--;
+            debug("otrzymalem RELkucyk, turysciWycieczka = %d", turysciWycieczka);
             break;
 
         // obsługa REQlodz
@@ -98,9 +99,11 @@ void *startKomWatek(void *)
             {
                 LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
             }
-            break;
+            
 
             turysciWycieczka += liczbaodplywajacych;
+            debug("odplynelo %d turystow, turysciWycieczka = %d", liczbaodplywajacych, turysciWycieczka);
+            break;
         }
         default:
             break;
