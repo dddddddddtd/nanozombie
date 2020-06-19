@@ -11,12 +11,6 @@ void *startKomWatek(void *)
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (1)
     {
-        if (signalhandler == true)
-        { // zmiana stanu na Ending i zakończenie wątku komunikacyjnego
-            changeState(Ending);
-            break;
-        }
-
         // odbiór dowolnej wiadomości
         lamportReceive(&packet, MPI_ANY_SOURCE, MPI_ANY_TAG, &status, &lamportClock);
 
