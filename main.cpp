@@ -19,6 +19,7 @@ pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t kucykMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lodzMut = PTHREAD_MUTEX_INITIALIZER;
 
 state_t stan = Inactive;
 
@@ -37,6 +38,8 @@ void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamport
     // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
     for (int i = 0; i < receivers.size(); i++)
     {
+        // if (tag == 5)
+        //     printf("%d: WYSYLAM TAG (%d) DO: %d\n", rank, tag, receivers[i]);
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
     }
 }
@@ -114,12 +117,12 @@ void inicjuj(int argc, char **argv)
     touristCount = size;
     if (argc != 7) // w razie brakujących argumentów - wartości domyślne
     {
-        ponyCostumes = 2;
-        lodzCount = 2;
-        touristRangeFrom = 3;
-        touristRangeTo = 3;
+        ponyCostumes = 10;
+        lodzCount = 4;
+        touristRangeFrom = 1;
+        touristRangeTo = 2;
         submarineRangeFrom = 3;
-        submarineRangeTo = 4;
+        submarineRangeTo = 5;
     }
     else
     {
@@ -195,6 +198,8 @@ void finalizuj()
 
     pthread_mutex_destroy(&stateMut);
     pthread_mutex_destroy(&lamportMut);
+    pthread_mutex_destroy(&kucykMut);
+    pthread_mutex_destroy(&lodzMut);
 
     pthread_join(threadKom, NULL);
     MPI_Type_free(&mpiLamportPacket);

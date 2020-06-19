@@ -77,6 +77,7 @@ extern std::vector<int> lodzieStan;      //0 - wyplynela, 1 - oczekuje
 extern std::vector<int> wycieczka;       //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
 extern pthread_mutex_t kucykMut;
+extern pthread_mutex_t lodzMut;
 
 /* to może przeniesiemy do global... */
 typedef struct
