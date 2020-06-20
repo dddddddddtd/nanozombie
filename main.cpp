@@ -159,17 +159,15 @@ bool inicjuj(int argc, char **argv)
             lodziePojemnosc.push_back(getRandom(submarineRangeFrom, submarineRangeTo));
         }
 
+        debug("turysci: %s", stringVector(tourists).c_str());
+        debug("lodzie: %s", stringVector(lodziePojemnosc).c_str());
+
         // wysłanie danych do wszystkich procesów
         for (int i = 1; i < size; i++)
         {
             MPI_Send(tourists.data(), touristCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
             MPI_Send(lodziePojemnosc.data(), lodzCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
         }
-
-        debug("turysci: %s", stringVector(tourists).c_str());
-        debug("lodzie: %s", stringVector(lodziePojemnosc).c_str());
-        //     printArray(&rank, tourists.data(), touristCount, "turysci");
-        // printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
     }
 
     // każdy proces odbiera dane
