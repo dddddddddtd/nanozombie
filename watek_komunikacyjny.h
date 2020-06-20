@@ -69,6 +69,7 @@ void *startKomWatek(void *)
             if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
                 // debug("ACKlodz %d/%d, %s", lodzACKcount, touristCount, stringLIST(LISTlodz).c_str());
+                // changeState(LodzQ); //zmiana stanu na LodzQ
                 pthread_mutex_lock(&lodzMut);
                 if (LISTlodz.size() != 0)
                 {
@@ -76,13 +77,13 @@ void *startKomWatek(void *)
                     int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
                     if (index == 0)
                     {
-                        debug("ZMIENIAM STAN NA LODZTEST");
+                        // debug("ZMIENIAM STAN NA LODZTEST (ACKLODZ)");
                         changeState(LodzTEST);
                     }
                 }
                 pthread_mutex_unlock(&lodzMut);
 
-                // changeState(LodzQ); //zmiana stanu na LodzQ
+                
             }
             break;
 
@@ -132,7 +133,7 @@ void *startKomWatek(void *)
                 int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
                 if (index == 0)
                 {
-                    debug("ZMIENIAM STAN NA LODZTEST");
+                    // debug("ZMIENIAM STAN NA LODZTEST (FULLLODZ)");
                     changeState(LodzTEST);
                 }
             }
