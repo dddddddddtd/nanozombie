@@ -32,7 +32,8 @@ typedef enum
     LodzQ,
     Wycieczka,
     LodzWait,
-    Ending
+    Ending,
+    LodzTEST
 } state_t;
 extern state_t stan;
 extern int rank;
@@ -74,7 +75,8 @@ extern std::vector<int> touristsId;      //wektor przechowujący id wszystkich p
 extern std::vector<int> tourists;        //wektor przechowujący stopień zajętości łodzi przez każdego z turystów
 extern std::vector<int> lodziePojemnosc; //wektor przechowujący maksymalną zajętość łodzi
 extern std::vector<int> lodzieStan;      //0 - wyplynela, 1 - oczekuje
-extern std::vector<int> wycieczka;       //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
+extern std::vector<int> turysciStan;     //0 - na wycieczce, 1 - nie na wycieczce
+extern std::vector<int> wycieczka; //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
 extern pthread_mutex_t kucykMut;
 extern pthread_mutex_t lodzMut;

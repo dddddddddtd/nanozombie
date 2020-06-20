@@ -9,6 +9,7 @@ void *startKomWatek(void *)
     lamportPacket packetOut;
 
     std::string test;
+    std::vector<int> receivers;
 
     /* Obrazuje pętlę odbierającą pakiety o różnych typach */
     while (1)
@@ -25,7 +26,8 @@ void *startKomWatek(void *)
             LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej ze strojami kucyka
             // debug("REQkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
-            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
+            receivers = std::vector<int>(1, status.MPI_SOURCE);
+            lamportSend(receivers, ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
             break;
 
         // obsługa ACKkucyk
@@ -45,22 +47,42 @@ void *startKomWatek(void *)
             LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
             // debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
+            turysciStan[status.MPI_SOURCE] = 1;
             turysciWycieczka--;
             break;
 
         // obsługa REQlodz
         case REQlodz:
-            LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej z łodziami
+            pthread_mutex_lock(&lodzMut);
+            if (turysciStan[status.MPI_SOURCE] != 0)
+                LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej z łodziami
+            pthread_mutex_unlock(&lodzMut);
             // debug("odsylam na %d", status.MPI_SOURCE);
-            lamportSend(std::vector<int>(1, status.MPI_SOURCE), ACKlodz, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKlodz
+            receivers = std::vector<int>(1, status.MPI_SOURCE);
+            lamportSend(receivers, ACKlodz, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKlodz
             break;
 
         // obsługa ACKlodz
         case ACKlodz:
-            lodzACKcount++;                   // zwiększenie liczby potwierdzeń dotyczących łodzi
+            lodzACKcount++; // zwiększenie liczby potwierdzeń dotyczących łodzi
+            // debug("uzyskalem %d/%d potwierdzen ACKlodz", lodzACKcount, touristCount);
             if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
-                changeState(LodzQ); //zmiana stanu na LodzQ
+                // debug("ACKlodz %d/%d, %s", lodzACKcount, touristCount, stringLIST(LISTlodz).c_str());
+                pthread_mutex_lock(&lodzMut);
+                if (LISTlodz.size() != 0)
+                {
+                    std::sort(LISTlodz.begin(), LISTlodz.end());
+                    int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
+                    if (index == 0)
+                    {
+                        debug("ZMIENIAM STAN NA LODZTEST");
+                        changeState(LodzTEST);
+                    }
+                }
+                pthread_mutex_unlock(&lodzMut);
+
+                // changeState(LodzQ); //zmiana stanu na LodzQ
             }
             break;
 
@@ -88,14 +110,7 @@ void *startKomWatek(void *)
             // debug("!!!przed odebraniem odplywajacych od %d, odplywajacych = %d", status.MPI_SOURCE, liczbaodplywajacych);
             MPI_Recv(odplywajace, liczbaodplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
 
-            // test = "[";
-            // for (int i = 0; i < liczbaodplywajacych; i++)
-            // {
-            //     test += std::to_string(odplywajace[i]) + ",";
-            // }
-            // test += "]";
-
-            // debug("!!!odebralem od %d: %s", status.MPI_SOURCE, test.c_str());
+            // debug("!!!odebralem od %d: %s, stan LISTlodz: %s", status.MPI_SOURCE, stringArray(odplywajace, liczbaodplywajacych).c_str(), stringLIST(LISTlodz).c_str());
             if (checkIfInArray(odplywajace, liczbaodplywajacych, rank) && status.MPI_SOURCE != rank) // jeśli turysta odpływa tą łodzią
             {
                 nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
@@ -107,8 +122,22 @@ void *startKomWatek(void *)
             pthread_mutex_lock(&lodzMut);
             for (int i = 0; i < liczbaodplywajacych; i++)
             {
+                turysciStan[odplywajace[i]] = 0;
                 LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
             }
+
+            if (LISTlodz.size() != 0)
+            {
+                std::sort(LISTlodz.begin(), LISTlodz.end());
+                int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
+                if (index == 0)
+                {
+                    debug("ZMIENIAM STAN NA LODZTEST");
+                    changeState(LodzTEST);
+                }
+            }
+
+            // debug("!!!usunalem, stan LISTlodz: %s, nadzorca: %d, turysciWycieczka: %d", stringLIST(LISTlodz).c_str(), nadzorca, turysciWycieczka);
             pthread_mutex_unlock(&lodzMut);
 
             turysciWycieczka += liczbaodplywajacych;

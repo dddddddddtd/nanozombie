@@ -11,7 +11,7 @@ int nadzorca;
 int turysciWycieczka = 0;
 
 std::vector<Request> LISTkucyk, LISTlodz;
-std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;
+std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan, turysciStan;
 
 // wątek komunikacyjny, mutexy i stan
 pthread_t threadKom;
@@ -193,6 +193,7 @@ bool inicjuj(int argc, char **argv)
     }
 
     lodzieStan = std::vector<int>(lodzCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
+    turysciStan = std::vector<int>(touristCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
     wybieranaLodz = 0;                           // ustawienie id wybieranej łodzi
     nadzorca = -1;
     return true;
