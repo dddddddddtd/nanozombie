@@ -8,7 +8,7 @@ void mainLoop()
         {
             waitFor("zanim zaczne ubiegac sie o kucyka"); // oczekiwanie przez wylosowany czas i wypisanie komunikatu
 
-            debug("Ubiegam się o kostium kucyka");
+            debug("1. ubiegam się o kostium kucyka");
             kucykACKcount = 0;
             changeState(KucykWait);
             lamportPacket packetOut;
@@ -28,7 +28,7 @@ void mainLoop()
 
             if (index < ponyCostumes)
             {
-                debug("biore stroj kucyka i ubiegam sie o łódź z kolejka KUCYK: %s", stringLIST(LISTkucyk).c_str());
+                debug("2. biore stroj kucyka i ubiegam sie o łódź");
                 lodzACKcount = 0;
                 changeState(LodzWait); // zmiana stanu na LodzWait
                 lamportPacket packetOut;
@@ -57,7 +57,7 @@ void mainLoop()
 
                         if (LISTlodz.size() + turysciWycieczka >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
                         {
-                            debug("NADZORUJE TEST (%d): %s", turysciWycieczka, stringLIST(LISTlodz).c_str());
+                            // debug("NADZORUJE TEST (%d): %s", turysciWycieczka, stringLIST(LISTlodz).c_str());
                             wycieczka.clear();
                             int suma = 0;
                             for (int i = 0; i < LISTlodz.size(); i++)
@@ -79,7 +79,7 @@ void mainLoop()
                             lamportPacket packetOut;
                             packetOut.count = wycieczka.size(); // liczba turystów wypływających
                             packetOut.lodz = wybieranaLodz;     // indeks łodzi wypływającej
-                            debug("wyplywam na wycieczke w lodzi: %d, stan LISTlodz: %s", packetOut.lodz, stringLIST(LISTlodz).c_str());
+                            debug("3. wyplywam na wycieczke w lodzi: %d, wycieczka to turysci: %s", packetOut.lodz, stringVector(wycieczka).c_str());
                             lamportSend(touristsId, FULLlodz, &lamportClock, packetOut); // wysłanie komunikatu FULLłódź do wszystkich turystów
                             for (int i = 0; i < size; i++)                               // przesłanie tablicy z wypływającymi turystami bez zwiększenia zegaru Lamporta (jako część jednej wiadomości wraz z FULLłódź)
                             {
@@ -102,18 +102,20 @@ void mainLoop()
         {
             if (nadzorca == rank) // jeśli turysta wysyłał komunikat FULLłódź
             {
-                debug("wycieczka z nadzorca %d", nadzorca);
-                std::string test = "jestem na wycieczce [";
-                for (int i = 0; i < wycieczka.size(); i++)
-                {
-                    test += std::to_string(wycieczka[i]) + ", ";
-                }
-                test = test.substr(0, test.size() - 2);
-                test += "]";
+                // std::string test = "jestem na wycieczce [";
+                // for (int i = 0; i < wycieczka.size(); i++)
+                // {
+                //     test += std::to_string(wycieczka[i]) + ", ";
+                // }
+                // test = test.substr(0, test.size() - 2);
+                // test += "]";
+
+                std::string test = "4. jestem na wycieczce z "+stringVector(wycieczka);
+
                 waitFor(test.c_str()); // odczekanie losowo wyznaczonego czasu i wypisaniu komunikatu, kto z tym turystą płynie
                 lamportPacket packetOut;
                 packetOut.lodz = wybieranaLodz;
-                debug("wracam z wycieczki, zwalniam stroj kucyka");
+                debug("5. wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELlodz, &lamportClock, packetOut);  // po odczekaniu, wysłanie komunikatu RELlodz
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // wysłanie komunikatu RELkucyk
                 changeState(Inactive);                                       // powrot do pierwszego stanu

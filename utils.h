@@ -34,6 +34,31 @@ void waitFor(const char *text) // oczekiwanie losowego czasu z wypisaniem tekstu
     }
 }
 
+std::string stringVector(std::vector<int> vec)
+{
+    std::string result = "[";
+    for (int i = 0; i < vec.size(); i++)
+    {
+        result += std::to_string(vec[i]) + ", ";
+    }
+    result = result.substr(0, result.size() - 2);
+    result += "]";
+    return result;
+}
+
+std::string stringArray(int a[], int count)
+{
+    std::string result = "[";
+    for (int i = 0; i < count; i++)
+    {
+        result += std::to_string(a[i]) + ", ";
+    }
+    result = result.substr(0, result.size() - 2);
+    result += "]";
+    return result;
+}
+
+
 void printArray(int *rank, int array[], int count, std::string title) // funkcja pomocnicza do tworzenia stringa z tablicy intów
 {
     std::string result = "";

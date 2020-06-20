@@ -70,7 +70,7 @@ void *startKomWatek(void *)
 
             if (nadzorca == status.MPI_SOURCE && rank != nadzorca) // jeśli brał udział w wycieczce nadawcy
             {
-                debug("wracam z wycieczki, zwalniam stroj kucyka");
+                debug("5. wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
                 changeState(Inactive);                                       // zmienia stan na poczatkowy
                 nadzorca = -1;                                               // ustawia id nadzorcy na -1
@@ -85,26 +85,25 @@ void *startKomWatek(void *)
             int odplywajace[liczbaodplywajacych];
 
             // odebranie listy turystów odpływających bez zwiększania zegaru Lamporta (jako część obsługi zdarzenia FULLlodz)
-            debug("!!!przed odebraniem odplywajacych od %d, odplywajacych = %d", status.MPI_SOURCE, liczbaodplywajacych);
+            // debug("!!!przed odebraniem odplywajacych od %d, odplywajacych = %d", status.MPI_SOURCE, liczbaodplywajacych);
             MPI_Recv(odplywajace, liczbaodplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
 
-            test = "[";
-            for (int i = 0; i < liczbaodplywajacych; i++)
-            {
-                test += std::to_string(odplywajace[i]) + ",";
-            }
-            test += "]";
+            // test = "[";
+            // for (int i = 0; i < liczbaodplywajacych; i++)
+            // {
+            //     test += std::to_string(odplywajace[i]) + ",";
+            // }
+            // test += "]";
 
-            debug("!!!odebralem od %d: %s", status.MPI_SOURCE, test.c_str());
+            // debug("!!!odebralem od %d: %s", status.MPI_SOURCE, test.c_str());
             if (checkIfInArray(odplywajace, liczbaodplywajacych, rank) && status.MPI_SOURCE != rank) // jeśli turysta odpływa tą łodzią
             {
                 nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
                 changeState(Wycieczka);       // zmiana stanu na Wycieczka
-                debug("jade na wycieczke z %d", nadzorca);
+                debug("3. jade na wycieczke: %s", stringArray(odplywajace, liczbaodplywajacych).c_str());
             }
 
             // usuwa turystów odplywajacych z listy oczekujących na łódź
-
             pthread_mutex_lock(&lodzMut);
             for (int i = 0; i < liczbaodplywajacych; i++)
             {

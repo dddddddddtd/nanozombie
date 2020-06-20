@@ -86,7 +86,7 @@ bool checkIfInArray(int a[], int size, int val)
     return false;
 }
 
-void inicjuj(int argc, char **argv)
+bool inicjuj(int argc, char **argv)
 {
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
@@ -133,6 +133,12 @@ void inicjuj(int argc, char **argv)
         submarineRangeFrom = atoi(argv[5]);
         submarineRangeTo = atoi(argv[6]);
     }
+    if (
+        touristCount < ponyCostumes ||
+        touristRangeTo > submarineRangeFrom ||
+        touristRangeFrom > touristRangeTo ||
+        submarineRangeFrom > submarineRangeTo)
+        return false;
 
     if (rank == ROOT)
     {
@@ -160,8 +166,10 @@ void inicjuj(int argc, char **argv)
             MPI_Send(lodziePojemnosc.data(), lodzCount, MPI_INT, i, DATA, MPI_COMM_WORLD);
         }
 
-        printArray(&rank, tourists.data(), touristCount, "turysci");
-        printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
+        debug("turysci: %s", stringVector(tourists).c_str());
+        debug("lodzie: %s", stringVector(lodziePojemnosc).c_str());
+        //     printArray(&rank, tourists.data(), touristCount, "turysci");
+        // printArray(&rank, lodziePojemnosc.data(), lodzCount, "lodzie");
     }
 
     // każdy proces odbiera dane
@@ -189,6 +197,7 @@ void inicjuj(int argc, char **argv)
     lodzieStan = std::vector<int>(lodzCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
     wybieranaLodz = 0;                           // ustawienie id wybieranej łodzi
     nadzorca = -1;
+    return true;
 }
 
 void finalizuj()
@@ -207,11 +216,18 @@ void finalizuj()
 }
 
 //program uruchamiany
-//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> <minimum turysty> <maksimum> <minimum lodzi> <maksimum lodzi>
+//mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> <minimum turysty> <maksimum turysty> <minimum lodzi> <maksimum lodzi>
 int main(int argc, char **argv)
 {
-    inicjuj(argc, argv);
-    mainLoop();
+    if (inicjuj(argc, argv))
+    {
+        mainLoop();
+    }
+    else
+    {
+        printf("Bledne wartosci argumentów\nKonczenie programu\n");
+    }
+
     finalizuj();
 
     return 0;
