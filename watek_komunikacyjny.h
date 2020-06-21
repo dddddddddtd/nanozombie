@@ -38,10 +38,11 @@ void *startKomWatek(void *)
             // debug("ACKkucyk od %d, mam zgod %d/%d", status.MPI_SOURCE, kucykACKcount, touristCount);
             if (kucykACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
             {
-                // debug("ACKkucyk mam zgod %d/%d: %s", kucykACKcount, touristCount, stringLIST(LISTkucyk).c_str());
+                debug("OTRZYMALEM WSZYSTKIE ZGODY ACKKUCYK");
                 changeState(KucykQ); //zmiana stanu na KucykQ
                 // debug("komplet ack");
                 MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
+                debug("Odeslalem do kontynuacji");
             }
             break;
 
@@ -64,8 +65,13 @@ void *startKomWatek(void *)
         // obsługa REQlodz
         case REQlodz:
             pthread_mutex_lock(&lodzMut);
+            debug("turysciStan[%d] = %d", status.MPI_SOURCE, turysciStan[status.MPI_SOURCE]);
             if (turysciStan[status.MPI_SOURCE] != 0)
+            {
                 LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej z łodziami
+                debug("LISTlodz: %s", stringLIST(LISTlodz).c_str());
+            }
+
             pthread_mutex_unlock(&lodzMut);
             // debug("odsylam na %d", status.MPI_SOURCE);
             receivers = std::vector<int>(1, status.MPI_SOURCE);
@@ -98,7 +104,7 @@ void *startKomWatek(void *)
         // obsługa RELlodz
         case RELlodz:
             lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
-            if (nadzorca == -1)
+            if (nadzorca != status.MPI_SOURCE)
             {
                 pthread_mutex_lock(&lodzMut);
                 if (LISTlodz.size() != 0)
@@ -120,7 +126,7 @@ void *startKomWatek(void *)
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
                 changeState(Inactive);                                       // zmienia stan na poczatkowy
                 MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
-                nadzorca = -1;                                               // ustawia id nadzorcy na -1
+                nadzorca = -1; // ustawia id nadzorcy na -1
             }
             break;
 

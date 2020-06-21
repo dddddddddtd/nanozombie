@@ -28,17 +28,19 @@ state_t stan = Inactive;
 MPI_Datatype mpiLamportPacket;
 
 // wysyłanie komunikatów
-void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packetOut)
+void lamportSend(std::vector<int> receivers, int tag, int *lamport, lamportPacket packetOut)
 {
     //zwiększenie wartości zegaru Lamporta i wpisanie jej do pakietu
     pthread_mutex_lock(&lamportMut);
-    (*lamportClock)++;
-    packetOut.lamportClock = *lamportClock;
+    (*lamport)++;
+    packetOut.lamportClock = *lamport;
+    int lamportClok = *lamport;
     pthread_mutex_unlock(&lamportMut);
 
     // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
     for (int i = 0; i < receivers.size(); i++)
     {
+        debug("wyslalem TAG (%d) do %d", tag, receivers[i]);
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
     }
 }
@@ -52,7 +54,7 @@ int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status
     *lamport = max(*lamport, packetIn->lamportClock) + 1;
     pthread_mutex_unlock(&lamportMut);
     int lamportClock = *lamport;
-    // debug("OTRZYMALEM KOMUNIKAT %d OD %d", status->MPI_TAG, status->MPI_SOURCE);
+    debug("OTRZYMALEM KOMUNIKAT %d OD %d", status->MPI_TAG, status->MPI_SOURCE);
     return result;
 }
 

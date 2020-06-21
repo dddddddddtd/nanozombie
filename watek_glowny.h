@@ -46,7 +46,8 @@ void mainLoop()
             break;
         }
 
-        // debug("zmienilem stan na: %s, LISTlodz: %s", stanstring.c_str(), stringLIST(LISTlodz).c_str());
+        debug("zmienilem stan na: %s, LISTlodz: %s", stanstring.c_str(), stringLIST(LISTlodz).c_str());
+        
 
         if (stan == Inactive) // stan nieaktywny
         {
@@ -70,7 +71,7 @@ void mainLoop()
             std::sort(LISTkucyk.begin(), LISTkucyk.end());
             int index = std::distance(LISTkucyk.begin(), std::find(LISTkucyk.begin(), LISTkucyk.end(), rank));
             pthread_mutex_unlock(&kucykMut);
-
+            debug("moj indeks w LISTkucyk: %d", index);
             if (index < ponyCostumes)
             {
                 debug("2. biore stroj kucyka i ubiegam sie o łódź");
@@ -87,10 +88,15 @@ void mainLoop()
             {
                 wybieranaLodz = (wybieranaLodz + 1) % lodzCount; // zmiana numeru wybieranej łodzi, jeśli obecnie wybierana nie jest w stanie oczekiwania
             }
+            debug("wybralem lodz, LISTlodz: %s", stringLIST(LISTlodz).c_str());
 
-            while (LISTlodz.size() + turysciWycieczka < ponyCostumes)
+            debug("LISTlodz.size() + turysciWycieczka = %ld", (LISTlodz.size()+turysciWycieczka));
+
+            while ((int) (LISTlodz.size() + turysciWycieczka) < ponyCostumes)
             {
+                
             }
+            debug("probuje wyslac wycieczke");
 
             // debug("NADZORUJE TEST (%d): %s", turysciWycieczka, stringLIST(LISTlodz).c_str());
             wycieczka.clear();

@@ -13,7 +13,8 @@ int max(int a, int b)
 
 double getRandomTime() // losowanie czasu z zakresu <3, 7>
 {
-    return (((double)rand() / (RAND_MAX)) * 3.0) + 0.0;
+    // return (((double)rand() / (RAND_MAX)) * 3.0) + 0.0;
+    return 0.000;
 }
 
 int getRandom(int lower, int upper) // losowanie inta z zakresu <lower, upper>
