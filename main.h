@@ -33,11 +33,13 @@ typedef enum
     Wycieczka,
     LodzWait,
     Ending,
-    LodzTEST
+    LodzTEST,
+    Wait
 } state_t;
 extern state_t stan;
 extern int rank;
 extern int size;
+extern MPI_Comm SELFCOMM;
 
 //zmienne dla każdego procesu
 

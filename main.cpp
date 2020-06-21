@@ -4,6 +4,7 @@
 #include "watek_glowny.h"
 
 // zmienne extern
+MPI_Comm SELFCOMM;
 int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock = 0;
 int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
@@ -38,21 +39,20 @@ void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamport
     // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
     for (int i = 0; i < receivers.size(); i++)
     {
-        // if (tag == 5)
-        //     printf("%d: WYSYLAM TAG (%d) DO: %d\n", rank, tag, receivers[i]);
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
     }
 }
 
 // odbieranie komunikatów
-int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
+int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamport)
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
-
     //zwiększenie wartości zegaru Lamporta po odebraniu
     pthread_mutex_lock(&lamportMut);
-    *lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
+    *lamport = max(*lamport, packetIn->lamportClock) + 1;
     pthread_mutex_unlock(&lamportMut);
+    int lamportClock = *lamport;
+    // debug("OTRZYMALEM KOMUNIKAT %d OD %d", status->MPI_TAG, status->MPI_SOURCE);
     return result;
 }
 
@@ -112,7 +112,11 @@ bool inicjuj(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status status;
 
-    srand(time(NULL) * rank);
+    MPI_Comm *newcomm;
+    MPI_Comm_split(MPI_COMM_WORLD, 0, rank, newcomm);
+    SELFCOMM = *newcomm;
+
+    srand(time(0) * rank);
 
     touristCount = size;
     if (argc != 7) // w razie brakujących argumentów - wartości domyślne
@@ -132,13 +136,13 @@ bool inicjuj(int argc, char **argv)
         touristRangeTo = atoi(argv[4]);
         submarineRangeFrom = atoi(argv[5]);
         submarineRangeTo = atoi(argv[6]);
+        if (
+            touristCount < ponyCostumes ||
+            touristRangeTo > submarineRangeFrom ||
+            touristRangeFrom > touristRangeTo ||
+            submarineRangeFrom > submarineRangeTo)
+            return false;
     }
-    if (
-        touristCount < ponyCostumes ||
-        touristRangeTo > submarineRangeFrom ||
-        touristRangeFrom > touristRangeTo ||
-        submarineRangeFrom > submarineRangeTo)
-        return false;
 
     if (rank == ROOT)
     {
@@ -192,9 +196,9 @@ bool inicjuj(int argc, char **argv)
         touristsId.push_back(i);
     }
 
-    lodzieStan = std::vector<int>(lodzCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
+    lodzieStan = std::vector<int>(lodzCount, 1);     // ustawienie stanu wszystkich łodzi na oczekujące
     turysciStan = std::vector<int>(touristCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
-    wybieranaLodz = 0;                           // ustawienie id wybieranej łodzi
+    wybieranaLodz = 0;                               // ustawienie id wybieranej łodzi
     nadzorca = -1;
     return true;
 }

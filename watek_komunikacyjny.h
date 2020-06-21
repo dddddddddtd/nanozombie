@@ -1,10 +1,12 @@
 #include "main.h"
 
+MPI_Request req;
+
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
 void *startKomWatek(void *)
 {
-    MPI_Status status;
 
+    MPI_Status status;
     lamportPacket packet;
     lamportPacket packetOut;
 
@@ -38,17 +40,25 @@ void *startKomWatek(void *)
             {
                 // debug("ACKkucyk mam zgod %d/%d: %s", kucykACKcount, touristCount, stringLIST(LISTkucyk).c_str());
                 changeState(KucykQ); //zmiana stanu na KucykQ
+                // debug("komplet ack");
+                MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
             }
             break;
 
         // obsługa RELkucyk
         case RELkucyk:
+            // debug("odebralem RELkucyk");
             pthread_mutex_lock(&kucykMut);
             LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
-            // debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
             turysciStan[status.MPI_SOURCE] = 1;
             turysciWycieczka--;
+            // debug("dostalem rel");
+            if (stan != Inactive)
+            {
+                MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
+            }
+
             break;
 
         // obsługa REQlodz
@@ -77,25 +87,39 @@ void *startKomWatek(void *)
                     int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
                     if (index == 0)
                     {
-                        // debug("ZMIENIAM STAN NA LODZTEST (ACKLODZ)");
                         changeState(LodzTEST);
+                        MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
                     }
                 }
                 pthread_mutex_unlock(&lodzMut);
-
-                
             }
             break;
 
         // obsługa RELlodz
         case RELlodz:
             lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
+            if (nadzorca == -1)
+            {
+                pthread_mutex_lock(&lodzMut);
+                if (LISTlodz.size() != 0)
+                {
+                    std::sort(LISTlodz.begin(), LISTlodz.end());
+                    int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
+                    if (index == 0)
+                    {
+                        changeState(LodzTEST);
+                        MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
+                    }
+                }
+                pthread_mutex_unlock(&lodzMut);
+            }
 
             if (nadzorca == status.MPI_SOURCE && rank != nadzorca) // jeśli brał udział w wycieczce nadawcy
             {
                 debug("5. wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
                 changeState(Inactive);                                       // zmienia stan na poczatkowy
+                MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
                 nadzorca = -1;                                               // ustawia id nadzorcy na -1
             }
             break;
@@ -135,6 +159,7 @@ void *startKomWatek(void *)
                 {
                     // debug("ZMIENIAM STAN NA LODZTEST (FULLLODZ)");
                     changeState(LodzTEST);
+                    MPI_Send(&kucykACKcount, 1, MPI_INT, rank, 0, SELFCOMM);
                 }
             }
 
