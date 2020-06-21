@@ -20,6 +20,8 @@ pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t kucykMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lodzMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t turysciWycieczkaMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t wycieczkaMut = PTHREAD_MUTEX_INITIALIZER;
 
 state_t stan = Inactive;
 
@@ -192,9 +194,9 @@ bool inicjuj(int argc, char **argv)
         touristsId.push_back(i);
     }
 
-    lodzieStan = std::vector<int>(lodzCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
+    lodzieStan = std::vector<int>(lodzCount, 1);     // ustawienie stanu wszystkich łodzi na oczekujące
     turysciStan = std::vector<int>(touristCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
-    wybieranaLodz = 0;                           // ustawienie id wybieranej łodzi
+    wybieranaLodz = 0;                               // ustawienie id wybieranej łodzi
     nadzorca = -1;
     return true;
 }

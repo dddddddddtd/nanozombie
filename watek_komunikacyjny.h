@@ -48,7 +48,11 @@ void *startKomWatek(void *)
             // debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
             pthread_mutex_unlock(&kucykMut);
             turysciStan[status.MPI_SOURCE] = 1;
-            turysciWycieczka--;
+            // pthread_mutex_lock(&turysciWycieczkaMut);
+            // // debug("PRZED!!! RELkucyk od %d, turysciWycieczka = %d", status.MPI_SOURCE, turysciWycieczka);
+            // turysciWycieczka--;
+            // debug("PO!!! RELkucyk od %d, turysciWycieczka = %d", status.MPI_SOURCE, turysciWycieczka);
+            // pthread_mutex_unlock(&turysciWycieczkaMut);
             break;
 
         // obsługa REQlodz
@@ -82,8 +86,6 @@ void *startKomWatek(void *)
                     }
                 }
                 pthread_mutex_unlock(&lodzMut);
-
-                
             }
             break;
 
@@ -91,7 +93,7 @@ void *startKomWatek(void *)
         case RELlodz:
             lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
 
-            if (nadzorca == status.MPI_SOURCE && rank != nadzorca) // jeśli brał udział w wycieczce nadawcy
+            if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy   && rank != nadzorca
             {
                 debug("5. wracam z wycieczki, zwalniam stroj kucyka");
                 lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
@@ -140,8 +142,11 @@ void *startKomWatek(void *)
 
             // debug("!!!usunalem, stan LISTlodz: %s, nadzorca: %d, turysciWycieczka: %d", stringLIST(LISTlodz).c_str(), nadzorca, turysciWycieczka);
             pthread_mutex_unlock(&lodzMut);
-
-            turysciWycieczka += liczbaodplywajacych;
+            // pthread_mutex_lock(&turysciWycieczkaMut);
+            // // debug("PRZED ODPLYNIECIEM: %d", turysciWycieczka);
+            // turysciWycieczka += liczbaodplywajacych;
+            // // debug("PO ODPLYNIECIU: %d", turysciWycieczka);
+            // pthread_mutex_unlock(&turysciWycieczkaMut);
             break;
         }
         default:

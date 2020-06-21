@@ -33,7 +33,8 @@ typedef enum
     Wycieczka,
     LodzWait,
     Ending,
-    LodzTEST
+    LodzTEST,
+    Wait
 } state_t;
 extern state_t stan;
 extern int rank;
@@ -80,6 +81,8 @@ extern std::vector<int> wycieczka; //wektor do zbierania turystów, którzy jad�
 
 extern pthread_mutex_t kucykMut;
 extern pthread_mutex_t lodzMut;
+extern pthread_mutex_t turysciWycieczkaMut;
+extern pthread_mutex_t wycieczkaMut;
 
 /* to może przeniesiemy do global... */
 typedef struct
