@@ -27,14 +27,12 @@
 typedef enum
 {
     Inactive,
-    KucykWait,
     KucykQ,
     LodzQ,
     Wycieczka,
     LodzWait,
-    Ending,
     LodzTEST,
-    Wait
+    Ending,
 } state_t;
 extern state_t stan;
 extern int rank;
@@ -80,7 +78,7 @@ extern std::vector<Request> LISTkucyk;
 extern std::vector<Request> LISTlodz;
 
 extern std::vector<int> LISTkucykOK;
-extern std::vector<int> LISTkucykHALT;
+extern std::vector<Request> LISTkucykHALT;
 
 extern std::vector<int> LISTlodzOK;
 extern std::vector<int> LISTlodzHALT;
@@ -104,7 +102,7 @@ extern pthread_t threadKom;
 typedef struct
 {
     int lamportClock;
-    int src;
+    int answerto;
     int count;
     int lodz;
 } lamportPacket;
@@ -140,7 +138,7 @@ extern MPI_Datatype mpiLamportPacket;
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d {%d}]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, stan, ##__VA_ARGS__, 27, 0, 37);
+#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d (%d, %d) {%d}]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, kucyk.processid, kucyk.lamportClock, stan, ##__VA_ARGS__, 27, 0, 37);
 #else
 #define debug(...) ;
 #endif
@@ -162,6 +160,7 @@ extern MPI_Datatype mpiLamportPacket;
 void changeState(state_t);
 
 void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packet);
+void lamportSendRequest(std::vector<Request> requests, int tag, int *lamportClock, lamportPacket packetOut);
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock);
 std::string stringLIST(std::vector<Request> LIST);
 bool checkIfInArray(int a[], int size, int val);

@@ -16,7 +16,7 @@ Request lodz = Request(-1, -1);
 std::vector<Request> LISTkucyk, LISTlodz;
 
 std::vector<int> LISTkucykOK;
-std::vector<int> LISTkucykHALT;
+std::vector<Request> LISTkucykHALT;
 
 std::vector<int> LISTlodzOK;
 std::vector<int> LISTlodzHALT;
@@ -52,6 +52,23 @@ void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamport
     {
         // printf("%d: WYSYLAM (%d) do %d\n", rank, tag, receivers[i]);
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
+    }
+}
+
+void lamportSendRequest(std::vector<Request> requests, int tag, int *lamportClock, lamportPacket packetOut)
+{
+    if (requests.size() == 0)
+        return;
+    //zwiększenie wartości zegaru Lamporta i wpisanie jej do pakietu
+    (*lamportClock)++;
+    packetOut.lamportClock = *lamportClock;
+
+    // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
+    for (int i = 0; i < requests.size(); i++)
+    {
+        packetOut.answerto=requests[i].lamportClock;
+        // printf("%d: WYSYLAM (%d) do %d\n", rank, tag, receivers[i]);
+        MPI_Send(&packetOut, 1, mpiLamportPacket, requests[i].processid, tag, MPI_COMM_WORLD);
     }
 }
 
@@ -113,7 +130,7 @@ bool inicjuj(int argc, char **argv)
     };
     MPI_Aint offsets[4];
     offsets[0] = offsetof(lamportPacket, lamportClock);
-    offsets[1] = offsetof(lamportPacket, src);
+    offsets[1] = offsetof(lamportPacket, answerto);
     offsets[2] = offsetof(lamportPacket, count);
     offsets[3] = offsetof(lamportPacket, lodz);
     MPI_Type_create_struct(4, blocklengths, offsets, types, &mpiLamportPacket);
