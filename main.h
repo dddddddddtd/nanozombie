@@ -42,6 +42,8 @@ extern int size;
 
 //zmienne dla każdego procesu
 
+// extern int kucyk, lodz;
+
 extern int touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRangeTo, submarineRangeFrom, submarineRangeTo, lamportClock;
 extern int kucykACKcount, lodzACKcount;
 extern int wybieranaLodz;
@@ -61,6 +63,8 @@ public:
 
     bool operator<(const Request &req) const
     {
+        if(req.processid==-1)
+            return true;
         return (lamportClock < req.lamportClock) || (lamportClock == req.lamportClock && processid < req.processid);
     }
 
@@ -70,8 +74,17 @@ public:
     }
 };
 
+extern Request kucyk, lodz;
+
 extern std::vector<Request> LISTkucyk;
 extern std::vector<Request> LISTlodz;
+
+extern std::vector<int> LISTkucykOK;
+extern std::vector<int> LISTkucykHALT;
+
+extern std::vector<int> LISTlodzOK;
+extern std::vector<int> LISTlodzHALT;
+
 extern std::vector<int> touristsId;      //wektor przechowujący id wszystkich procesów (używany, gdy wysyłamy komunikat do wszystkich procesów)
 extern std::vector<int> tourists;        //wektor przechowujący stopień zajętości łodzi przez każdego z turystów
 extern std::vector<int> lodziePojemnosc; //wektor przechowujący maksymalną zajętość łodzi
@@ -79,10 +92,13 @@ extern std::vector<int> lodzieStan;      //0 - wyplynela, 1 - oczekuje
 extern std::vector<int> turysciStan;     //0 - na wycieczce, 1 - nie na wycieczce
 extern std::vector<int> wycieczka; //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
+extern pthread_mutex_t lamportMut;
 extern pthread_mutex_t kucykMut;
 extern pthread_mutex_t lodzMut;
-extern pthread_mutex_t turysciWycieczkaMut;
-extern pthread_mutex_t wycieczkaMut;
+extern pthread_mutex_t kucykOKMut;
+extern pthread_mutex_t kucykHALTMut;
+
+extern pthread_t threadKom;
 
 /* to może przeniesiemy do global... */
 typedef struct
@@ -103,6 +119,7 @@ extern MPI_Datatype mpiLamportPacket;
 #define RELlodz 6  //zwolnienie
 #define FULLlodz 7 //wypłynięcie łodzi
 #define DATA 8     //służy do przesyłania tablic
+#define END 9
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
@@ -123,7 +140,7 @@ extern MPI_Datatype mpiLamportPacket;
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, ##__VA_ARGS__, 27, 0, 37);
+#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d {%d}]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, stan, ##__VA_ARGS__, 27, 0, 37);
 #else
 #define debug(...) ;
 #endif
@@ -150,3 +167,4 @@ std::string stringLIST(std::vector<Request> LIST);
 bool checkIfInArray(int a[], int size, int val);
 
 #endif
+

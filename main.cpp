@@ -9,8 +9,18 @@ int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
 int nadzorca;
 int turysciWycieczka = 0;
+// int kucyk = -1, lodz = -1;
+Request kucyk = Request(-1, -1);
+Request lodz = Request(-1, -1);
 
 std::vector<Request> LISTkucyk, LISTlodz;
+
+std::vector<int> LISTkucykOK;
+std::vector<int> LISTkucykHALT;
+
+std::vector<int> LISTlodzOK;
+std::vector<int> LISTlodzHALT;
+
 std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan, turysciStan;
 
 // wątek komunikacyjny, mutexy i stan
@@ -20,8 +30,8 @@ pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t kucykMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lodzMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t turysciWycieczkaMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t wycieczkaMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t kucykOKMut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t kucykHALTMut = PTHREAD_MUTEX_INITIALIZER;
 
 state_t stan = Inactive;
 
@@ -31,17 +41,16 @@ MPI_Datatype mpiLamportPacket;
 // wysyłanie komunikatów
 void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamportPacket packetOut)
 {
+    if (receivers.size() == 0)
+        return;
     //zwiększenie wartości zegaru Lamporta i wpisanie jej do pakietu
-    pthread_mutex_lock(&lamportMut);
     (*lamportClock)++;
     packetOut.lamportClock = *lamportClock;
-    pthread_mutex_unlock(&lamportMut);
 
     // wysłanie wiadomości do wszystkich procesów, których id znajduje się w wektorze receivers
     for (int i = 0; i < receivers.size(); i++)
     {
-        // if (tag == 5)
-        //     printf("%d: WYSYLAM TAG (%d) DO: %d\n", rank, tag, receivers[i]);
+        // printf("%d: WYSYLAM (%d) do %d\n", rank, tag, receivers[i]);
         MPI_Send(&packetOut, 1, mpiLamportPacket, receivers[i], tag, MPI_COMM_WORLD);
     }
 }
@@ -50,7 +59,7 @@ void lamportSend(std::vector<int> receivers, int tag, int *lamportClock, lamport
 int lamportReceive(lamportPacket *packetIn, int src, int tag, MPI_Status *status, int *lamportClock)
 {
     int result = MPI_Recv(packetIn, 1, mpiLamportPacket, src, tag, MPI_COMM_WORLD, status);
-
+    // printf("ODEBRALEM (%d) od %d\n", status->MPI_TAG, status->MPI_SOURCE);
     //zwiększenie wartości zegaru Lamporta po odebraniu
     pthread_mutex_lock(&lamportMut);
     *lamportClock = max(*lamportClock, packetIn->lamportClock) + 1;
@@ -198,6 +207,10 @@ bool inicjuj(int argc, char **argv)
     turysciStan = std::vector<int>(touristCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
     wybieranaLodz = 0;                               // ustawienie id wybieranej łodzi
     nadzorca = -1;
+
+    // kucyk = 0;
+    // lodz = 0;
+
     return true;
 }
 
@@ -211,6 +224,9 @@ void finalizuj()
     pthread_mutex_destroy(&kucykMut);
     pthread_mutex_destroy(&lodzMut);
 
+    //te na razie niepotrzebne
+    
+
     pthread_join(threadKom, NULL);
     MPI_Type_free(&mpiLamportPacket);
     MPI_Finalize();
@@ -220,6 +236,7 @@ void finalizuj()
 //mpirun -np <liczba turystów> --oversubscribe a.out <liczba strojow kucyka> <liczba lodzi podwodnych> <minimum turysty> <maksimum turysty> <minimum lodzi> <maksimum lodzi>
 int main(int argc, char **argv)
 {
+
     if (inicjuj(argc, argv))
     {
         mainLoop();
