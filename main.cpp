@@ -13,13 +13,13 @@ int turysciWycieczka = 0;
 Request kucyk = Request(-1, -1);
 Request lodz = Request(-1, -1);
 
-std::vector<Request> LISTkucyk, LISTlodz;
+
 
 std::vector<int> LISTkucykOK;
 std::vector<Request> LISTkucykHALT;
 
-std::vector<int> LISTlodzOK;
-std::vector<int> LISTlodzHALT;
+
+std::vector<Request> LISTlodzHALT;
 
 std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan, turysciStan;
 
@@ -28,10 +28,10 @@ pthread_t threadKom;
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
 
-pthread_mutex_t kucykMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t lodzMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t kucykOKMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t kucykHALTMut = PTHREAD_MUTEX_INITIALIZER;
+
+
+
+
 
 state_t stan = Inactive;
 
@@ -238,8 +238,8 @@ void finalizuj()
 
     pthread_mutex_destroy(&stateMut);
     pthread_mutex_destroy(&lamportMut);
-    pthread_mutex_destroy(&kucykMut);
-    pthread_mutex_destroy(&lodzMut);
+
+
 
     //te na razie niepotrzebne
     

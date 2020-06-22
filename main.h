@@ -75,13 +75,13 @@ public:
 extern Request kucyk, lodz;
 
 extern std::vector<Request> LISTkucyk;
-extern std::vector<Request> LISTlodz;
+
 
 extern std::vector<int> LISTkucykOK;
 extern std::vector<Request> LISTkucykHALT;
 
-extern std::vector<int> LISTlodzOK;
-extern std::vector<int> LISTlodzHALT;
+
+extern std::vector<Request> LISTlodzHALT;
 
 extern std::vector<int> touristsId;      //wektor przechowujący id wszystkich procesów (używany, gdy wysyłamy komunikat do wszystkich procesów)
 extern std::vector<int> tourists;        //wektor przechowujący stopień zajętości łodzi przez każdego z turystów
@@ -91,10 +91,10 @@ extern std::vector<int> turysciStan;     //0 - na wycieczce, 1 - nie na wycieczc
 extern std::vector<int> wycieczka; //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
 extern pthread_mutex_t lamportMut;
-extern pthread_mutex_t kucykMut;
-extern pthread_mutex_t lodzMut;
-extern pthread_mutex_t kucykOKMut;
-extern pthread_mutex_t kucykHALTMut;
+
+
+
+
 
 extern pthread_t threadKom;
 
@@ -138,7 +138,7 @@ extern MPI_Datatype mpiLamportPacket;
                                             
 */
 #ifdef DEBUG
-#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d (%d, %d) {%d}]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, kucyk.processid, kucyk.lamportClock, stan, ##__VA_ARGS__, 27, 0, 37);
+#define debug(FORMAT, ...) printf("%c[%d;%dm [%d - %d (%d, %d) {%d}]: " FORMAT "%c[%d;%dm\n", 27, (1 + (rank / 7)) % 2, 31 + (6 + rank) % 7, rank, lamportClock, kucyk.lamportClock, lodz.lamportClock, stan, ##__VA_ARGS__, 27, 0, 37);
 #else
 #define debug(...) ;
 #endif
