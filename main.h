@@ -30,9 +30,7 @@ typedef enum
     KucykQ,
     LodzQ,
     Wycieczka,
-    LodzWait,
-    LodzTEST,
-    Ending,
+    Ending
 } state_t;
 extern state_t stan;
 extern int rank;
@@ -46,7 +44,7 @@ extern int touristCount, ponyCostumes, lodzCount, touristRangeFrom, touristRange
 extern int kucykACKcount, lodzACKcount;
 extern int wybieranaLodz;
 extern int nadzorca;
-extern int turysciWycieczka; // liczba turystów aktualnie na wycieczce
+
 
 class Request
 {
@@ -74,26 +72,17 @@ public:
 
 extern Request kucyk, lodz;
 
-extern std::vector<Request> LISTkucyk;
-
-
-extern std::vector<int> LISTkucykOK;
 extern std::vector<Request> LISTkucykHALT;
-
-
 extern std::vector<Request> LISTlodzHALT;
 
 extern std::vector<int> touristsId;      //wektor przechowujący id wszystkich procesów (używany, gdy wysyłamy komunikat do wszystkich procesów)
 extern std::vector<int> tourists;        //wektor przechowujący stopień zajętości łodzi przez każdego z turystów
 extern std::vector<int> lodziePojemnosc; //wektor przechowujący maksymalną zajętość łodzi
 extern std::vector<int> lodzieStan;      //0 - wyplynela, 1 - oczekuje
-extern std::vector<int> turysciStan;     //0 - na wycieczce, 1 - nie na wycieczce
+
 extern std::vector<int> wycieczka; //wektor do zbierania turystów, którzy jadą wraz z turystą pierwszym w kolejce LISTlodz (nadzorcą)
 
 extern pthread_mutex_t lamportMut;
-
-
-
 
 
 extern pthread_t threadKom;

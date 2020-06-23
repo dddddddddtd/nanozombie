@@ -8,30 +8,18 @@ int rank, size, touristCount, ponyCostumes, lodzCount, touristRangeFrom, tourist
 int kucykACKcount, lodzACKcount;
 int wybieranaLodz;
 int nadzorca;
-int turysciWycieczka = 0;
-// int kucyk = -1, lodz = -1;
 Request kucyk = Request(-1, -1);
 Request lodz = Request(-1, -1);
 
-
-
-std::vector<int> LISTkucykOK;
 std::vector<Request> LISTkucykHALT;
-
-
 std::vector<Request> LISTlodzHALT;
 
-std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan, turysciStan;
+std::vector<int> tourists, lodziePojemnosc, touristsId, wycieczka, lodzieStan;
 
 // wątek komunikacyjny, mutexy i stan
 pthread_t threadKom;
 pthread_mutex_t stateMut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamportMut = PTHREAD_MUTEX_INITIALIZER;
-
-
-
-
-
 
 state_t stan = Inactive;
 
@@ -221,7 +209,7 @@ bool inicjuj(int argc, char **argv)
     }
 
     lodzieStan = std::vector<int>(lodzCount, 1);     // ustawienie stanu wszystkich łodzi na oczekujące
-    turysciStan = std::vector<int>(touristCount, 1); // ustawienie stanu wszystkich łodzi na oczekujące
+
     wybieranaLodz = 0;                               // ustawienie id wybieranej łodzi
     nadzorca = -1;
 
