@@ -26,14 +26,14 @@ void *startKomWatek(void *)
         case REQkucyk:
             // request nadawcy
             req = Request(status.MPI_SOURCE, packet.lamportClock);
-            // jeśli nadawca to ja lub nadawca ma wcześniejszy request 
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request
             if (status.MPI_SOURCE == rank || req < kucyk)
             {
                 receivers = std::vector<int>(1, status.MPI_SOURCE); //nadawca
                 packetOut.answerto = req.lamportClock;
                 pthread_mutex_lock(&lamportMut);
                 // odesłanie do nadawcy potwierdzenia ACKkucyk
-                lamportSend(receivers, ACKkucyk, &lamportClock, packetOut); 
+                lamportSend(receivers, ACKkucyk, &lamportClock, packetOut);
                 pthread_mutex_unlock(&lamportMut);
             }
             // jeśli nadawca ma późniejszy priorytet do dodaje go do listy oczekujących
@@ -48,12 +48,12 @@ void *startKomWatek(void *)
             if (stan == Inactive && packet.answerto == kucyk.lamportClock)
             {
                 // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
-                kucykACKcount++; 
+                kucykACKcount++;
                 debug("dostalem ACKkucyk %d/%d od %d z answerto: %d", kucykACKcount, (touristCount - ponyCostumes + 1), status.MPI_SOURCE, packet.answerto);
                 // jeśli uzyskałem już wystarczającą liczbę zgód
-                if (kucykACKcount >= touristCount - ponyCostumes + 1) 
+                if (kucykACKcount >= touristCount - ponyCostumes + 1)
                 {
-                     //zmiana stanu na KucykQ
+                    //zmiana stanu na KucykQ
                     changeState(KucykQ);
                 }
             }
@@ -76,15 +76,15 @@ void *startKomWatek(void *)
 
         // obsługa REQlodz - otrzymanie prośby na dostęp do łodzi
         case REQlodz:
-            // stworzenie requesta nadawcy 
+            // stworzenie requesta nadawcy
             req = Request(status.MPI_SOURCE, packet.lamportClock);
-            // jeśli nadawca to ja lub nadawca ma wcześniejszy request 
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request
             if (status.MPI_SOURCE == rank || req < lodz)
             {
                 receivers = std::vector<int>(1, status.MPI_SOURCE);
                 packetOut.answerto = req.lamportClock;
                 pthread_mutex_lock(&lamportMut);
-                 // odesłanie do nadawcy potwierdzenia ACKlodz
+                // odesłanie do nadawcy potwierdzenia ACKlodz
                 lamportSend(receivers, ACKlodz, &lamportClock, packetOut);
                 pthread_mutex_unlock(&lamportMut);
             }
@@ -101,9 +101,9 @@ void *startKomWatek(void *)
             if (stan == KucykQ && packet.answerto == lodz.lamportClock)
             {
                 // zwiększenie liczby potwierdzeń dostępu do łódzi
-                lodzACKcount++; 
+                lodzACKcount++;
                 debug("dostalem ACKlodz %d/%d od %d z answerto: %d", lodzACKcount, touristCount, status.MPI_SOURCE, packet.answerto);
-                 // jeśli otrzymał zgody od wszystkich turystów
+                // jeśli otrzymał zgody od wszystkich turystów
                 if (lodzACKcount == touristCount)
                 {
                     changeState(LodzQ); //zmiana stanu na lodzQ
@@ -115,7 +115,7 @@ void *startKomWatek(void *)
         {
             int liczbaOdplywajacych = packet.count;
             // zmiana stanu łodzi na wypłyniętą
-            lodzieStan[packet.lodz] = 0; 
+            lodzieStan[packet.lodz] = 0;
             int odplywajace[liczbaOdplywajacych];
 
             MPI_Recv(odplywajace, liczbaOdplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
@@ -126,7 +126,7 @@ void *startKomWatek(void *)
             {
                 debug("bede wysylac ACKlodz do: %s", stringLIST(LISTlodzHALT).c_str());
                 // ustawienie nadzorcy na nadawcę
-                nadzorca = status.MPI_SOURCE; 
+                nadzorca = status.MPI_SOURCE;
                 lodz.processid = -1;
                 lodz.lamportClock = -1;
                 changeState(Wycieczka);
@@ -139,6 +139,7 @@ void *startKomWatek(void *)
         }
 
         case RELlodz:
+            debug("otrzymalem RELlodz od %d: %d", status.MPI_SOURCE, packet.lodz);
             lodzieStan[packet.lodz] = 1; // zmiana stanu łodzi na wypłyniętą
 
             if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy   && rank != nadzorca

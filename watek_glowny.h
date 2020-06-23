@@ -123,6 +123,7 @@ void mainLoop()
             {
                 pthread_mutex_lock(&lamportMut);
                 lamportPacket packetOut;
+                packetOut.lodz=wybieranaLodz;
                 debug("wysylam RELlodz");
                 lamportSend(touristsId, RELlodz, &lamportClock, packetOut); //na sam koniec
                 pthread_mutex_unlock(&lamportMut);
