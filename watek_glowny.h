@@ -47,7 +47,7 @@ void mainLoop()
                 // czekam na zmianę stanu tu
             }
         }
-
+        // stan, w którym proces przygotywyje wycieczkę i wysyłą informację o niej pozoostałym procesom
         if (stan == LodzQ)
         {
             debug("czekam na pozostalych turystow");
@@ -112,25 +112,26 @@ void mainLoop()
 
             while (stan == LodzQ)
             {
-                // czekam tu na zmianę stanu
+                // czekam tu na zmianę stanu - wycieczkę
             }
         }
 
         if (stan == Wycieczka)
         {
-            debug("jestem na wycieczce z %d", nadzorca); 
+            debug("jestem na wycieczce, moj nadzorca to: %d", nadzorca); 
             if (nadzorca == rank)
             {
                 pthread_mutex_lock(&lamportMut);
                 lamportPacket packetOut;
                 packetOut.lodz=wybieranaLodz;
                 debug("wysylam RELlodz");
-                lamportSend(touristsId, RELlodz, &lamportClock, packetOut); //na sam koniec
+                lamportSend(touristsId, RELlodz, &lamportClock, packetOut);
                 pthread_mutex_unlock(&lamportMut);
             }
 
             while (stan == Wycieczka)
             {
+                // czekam tu na koniec wycieczki - do stanu Inactive
             }
             debug("koncze wycieczke");
         }

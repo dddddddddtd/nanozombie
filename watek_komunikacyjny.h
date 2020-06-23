@@ -59,19 +59,17 @@ void *startKomWatek(void *)
             }
             break;
 
-        // obsługa RELkucyk
+        // obsługa RELkucyk - następuje po RELLodz (wysyła tylko sam sobie)
         case RELkucyk:
-            if (status.MPI_SOURCE == rank)
-            {
-                kucyk.processid = -1;
-                kucyk.lamportClock = -1;
-                pthread_mutex_lock(&lamportMut);
-                lamportSendRequest(LISTkucykHALT, ACKkucyk, &lamportClock, packetOut);
-                pthread_mutex_unlock(&lamportMut);
-                LISTkucykHALT.clear();
-                changeState(Inactive);
-            }
-
+            kucyk.processid = -1;
+            kucyk.lamportClock = -1;
+            pthread_mutex_lock(&lamportMut);
+            // wysłanie do oczekujących na kucyka zgody
+            lamportSendRequest(LISTkucykHALT, ACKkucyk, &lamportClock, packetOut);
+            pthread_mutex_unlock(&lamportMut);
+            // wyczyszczenie listy
+            LISTkucykHALT.clear();
+            changeState(Inactive);
             break;
 
         // obsługa REQlodz - otrzymanie prośby na dostęp do łodzi
@@ -140,13 +138,18 @@ void *startKomWatek(void *)
 
         case RELlodz:
             debug("otrzymalem RELlodz od %d: %d", status.MPI_SOURCE, packet.lodz);
-            lodzieStan[packet.lodz] = 1; // zmiana stanu łodzi na wypłyniętą
+            // zmiana stanu łodzi na dostępna
+            lodzieStan[packet.lodz] = 1;
 
-            if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy   && rank != nadzorca
+             // jeśli brał udział w wycieczce nadawcy
+            if (nadzorca == status.MPI_SOURCE)
             {
-                nadzorca = -1; // ustawia id nadzorcy na -1
+                // ustawia id nadzorcy na -1
+                nadzorca = -1; 
                 pthread_mutex_lock(&lamportMut);
-                lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
+                // zwalnia kucyka
+                receivers = std::vector<int>(1, rank); //on sam
+                lamportSend(receivers, RELkucyk, &lamportClock, packetOut); 
                 pthread_mutex_unlock(&lamportMut);
             }
             break;
