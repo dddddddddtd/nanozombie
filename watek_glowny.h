@@ -2,115 +2,138 @@
 
 void mainLoop()
 {
+    int licznik = 0;
     while (1)
     {
-        // debug("%d", stan);
-        if (stan == Inactive) // stan nieaktywny
+        // stan nieaktywny,  początkowy - ubieganie sie o kostium kucyka
+        if (stan == Inactive)
         {
-            waitFor("zanim zaczne ubiegac sie o kucyka"); // oczekiwanie przez wylosowany czas i wypisanie komunikatu
-
             debug("1. ubiegam się o kostium kucyka");
+            // zerowanie liczby zgód na kostium kucyka
             kucykACKcount = 0;
-            changeState(KucykWait);
+
+            pthread_mutex_lock(&lamportMut);
             lamportPacket packetOut;
+            // stworzenie requesta
+            kucyk = Request(rank, lamportClock + 1);
+            // wysłanie REQkucyk do wszystkich procesów
             lamportSend(touristsId, REQkucyk, &lamportClock, packetOut);
-        }
+            pthread_mutex_unlock(&lamportMut);
 
-        if (stan == KucykWait) // pętla oczekująca, aż odebrane zostaną wszystkie zgody ACKkucyk
-        {
-        }
-
-        if (stan == KucykQ) // stan oczekiwania, aż proces będzie wśród ponyCostumes pierwszych procesów w kolejce dotyczącej kostiumu kucyka
-        {
-            pthread_mutex_lock(&kucykMut);
-            std::sort(LISTkucyk.begin(), LISTkucyk.end());
-            int index = std::distance(LISTkucyk.begin(), std::find(LISTkucyk.begin(), LISTkucyk.end(), rank));
-            pthread_mutex_unlock(&kucykMut);
-
-            if (index < ponyCostumes)
+            while (stan == Inactive)
             {
-                debug("2. biore stroj kucyka i ubiegam sie o łódź");
-                lodzACKcount = 0;
-                changeState(LodzWait); // zmiana stanu na LodzWait
-                lamportPacket packetOut;
-                lamportSend(touristsId, REQlodz, &lamportClock, packetOut); // wysłanie żądania REQlodz
+                //czekam na zmianę stanu tu
             }
         }
 
-        if (stan == LodzWait) // pętla oczekująca, aż odebrane zostaną wszystkie zgody ACKlodz
+        // stan, w którym proces bierze stan kostiym kucyka i zaczyna ubiegać się dostęp do łodzi
+        if (stan == KucykQ)
         {
+            
+            debug("2. biore stroj kucyka  i ubiega sie o lodz");
+            // zerowanie liczby zgód na dostęp do łodzi
+            lodzACKcount = 0;
+
+            pthread_mutex_lock(&lamportMut);
+            lamportPacket packetOut;
+            // stworzenie requesta
+            lodz = Request(rank, lamportClock + 1);
+            // wysłanie REQlodz do wszystkich procesów
+            lamportSend(touristsId, REQlodz, &lamportClock, packetOut);
+            pthread_mutex_unlock(&lamportMut);
+
+            while (stan == KucykQ)
+            {
+                // czekam na zmianę stanu tu
+            }
         }
-
-        if (stan == LodzTEST)
+        // stan, w którym proces przygotywyje wycieczkę i wysyłą informację o niej pozoostałym procesom
+        if (stan == LodzQ)
         {
-
+            debug("czekam na pozostalych turystow");
+            while (LISTlodzHALT.size() < ponyCostumes - 1)
+            { 
+                // czekam, az wszyscy turysci w strojach kucyka beda ubiegac sie o lodz 
+                // LISTlodzHALT - procesy, które czekają na dostęp do łodzi, ale mają niższy priorytet ode mnie
+            }
+            debug("czekam na wolna lodz");
+            // iterowanie się po łodziach, sprawdzanie czy któraś nie jest dostępna (1)
             while (lodzieStan[wybieranaLodz] == 0)
             {
                 wybieranaLodz = (wybieranaLodz + 1) % lodzCount;
             }
+            debug("wybralem lodz");
 
-            // debug("%d + %d >= %d", (int) LISTlodz.size(), turysciWycieczka, ponyCostumes);
-            int test = 0;
-            for (int i = 0; i < turysciStan.size(); i++)
+            // tworzenie nowej wycieczki
+            wycieczka.clear();
+
+            // suma sumuje rozmiar turystów na łodzi
+            // pierwszy dołącza rank
+            int suma = tourists[rank];
+            wycieczka.push_back(rank);
+
+            // sortowanie procesów
+            std::sort(LISTlodzHALT.begin(), LISTlodzHALT.end());
+
+            //iteracja po procesach oczekujących
+            for (int i = 0; i < LISTlodzHALT.size(); i++)
             {
-                if (turysciStan[i] == 0)
-                    test++;
+                suma += tourists[LISTlodzHALT[i].processid];
+                // jesli dany proces-turysta się mieści to jest dodawany
+                if (suma <= lodziePojemnosc[wybieranaLodz])
+                {
+                    // jest dodawany do wycieczki
+                    wycieczka.push_back(LISTlodzHALT[i].processid);
+                }
+
+                if (suma > lodziePojemnosc[wybieranaLodz])
+                {
+                    // a jesli nie to jest usuwany
+                    suma -= tourists[LISTlodzHALT[i].processid];
+                    continue;
+                }
             }
-            if (LISTlodz.size() + test >= ponyCostumes) // sprawdzenie, czy wszystkie kostiumy kucyka są zajęte
+            // wycieczka przygotowana
+            debug("bede jechac na wycieczke z %s w lodzi %d", stringVector(wycieczka).c_str(), wybieranaLodz);
+            lamportPacket packetOut;
+            // liczba turystów wypływających
+            packetOut.count = wycieczka.size();
+            // indeks łodzi wypływającej 
+            packetOut.lodz = wybieranaLodz;
+            pthread_mutex_lock(&lamportMut);
+             // wysłanie komunikatu FULLłódź do wszystkich turystów
+            lamportSend(touristsId, FULLlodz, &lamportClock, packetOut);
+            pthread_mutex_unlock(&lamportMut);
+            // przesłanie tablicy z wypływającymi turystami bez zwiększenia zegaru Lamporta (jako część jednej wiadomości wraz z FULLłódź)
+            for (int i = 0; i < size; i++) 
             {
-                debug("wszyscy maja stroj kucyka!");
-                // debug("NADZORUJE TEST (%d): %s", turysciWycieczka, stringLIST(LISTlodz).c_str());
-                pthread_mutex_lock(&wycieczkaMut);
-                wycieczka.clear();
-                pthread_mutex_unlock(&wycieczkaMut);
-                int suma = 0;
-                for (int i = 0; i < LISTlodz.size(); i++)
-                {
-                    suma += tourists[LISTlodz[i].processid];
-                    pthread_mutex_lock(&wycieczkaMut);
-                    if (suma <= lodziePojemnosc[wybieranaLodz])
-                    {
-                        wycieczka.push_back(LISTlodz[i].processid); // dodanie turysty do wektora turystów wypływających, jeśli mieści się on w łodzi
-                    }
-                    pthread_mutex_unlock(&wycieczkaMut);
+                MPI_Send(wycieczka.data(), (int)wycieczka.size(), MPI_INT, i, DATA, MPI_COMM_WORLD);
+            }
 
-                    if (suma > lodziePojemnosc[wybieranaLodz])
-                    {
-                        suma -= tourists[LISTlodz[i].processid];
-                        continue;
-                    }
-                }
-
-                lamportPacket packetOut;
-                packetOut.count = wycieczka.size(); // liczba turystów wypływających
-                packetOut.lodz = wybieranaLodz;     // indeks łodzi wypływającej
-                debug("3. wyplywam na wycieczke w lodzi: %d, wycieczka to turysci: %s", packetOut.lodz, stringVector(wycieczka).c_str());
-                lamportSend(touristsId, FULLlodz, &lamportClock, packetOut); // wysłanie komunikatu FULLłódź do wszystkich turystów
-                for (int i = 0; i < size; i++)                               // przesłanie tablicy z wypływającymi turystami bez zwiększenia zegaru Lamporta (jako część jednej wiadomości wraz z FULLłódź)
-                {
-                    MPI_Send(wycieczka.data(), (int)wycieczka.size(), MPI_INT, i, DATA, MPI_COMM_WORLD);
-                }
-
-                nadzorca = rank; // nadzorca to turysta, który wysyła komunikat FULLłódź i będzie wysyłać komunikat RELłódź
-                changeState(Wycieczka);
-                changeState(Wait);
-                std::string test = "4. jestem na wycieczce z " + stringVector(wycieczka);
-
-                waitFor(test.c_str()); // odczekanie losowo wyznaczonego czasu i wypisaniu komunikatu, kto z tym turystą płynie
-                // lamportPacket packetOut;
-                packetOut.lodz = wybieranaLodz;
-                // debug("5. wracam z wycieczki, zwalniam stroj kucyka");
-                lamportSend(touristsId, RELlodz, &lamportClock, packetOut); // po odczekaniu, wysłanie komunikatu RELlodz
-                // lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // wysłanie komunikatu RELkucyk
-                // powrot do pierwszego stanu
-                // nadzorca = -1;
+            while (stan == LodzQ)
+            {
+                // czekam tu na zmianę stanu - wycieczkę
             }
         }
 
-        if (stan == Ending) // zakończenie main_loop
+        if (stan == Wycieczka)
         {
-            debug("koncze");
-            break;
+            debug("jestem na wycieczce, moj nadzorca to: %d", nadzorca); 
+            if (nadzorca == rank)
+            {
+                pthread_mutex_lock(&lamportMut);
+                lamportPacket packetOut;
+                packetOut.lodz=wybieranaLodz;
+                debug("wysylam RELlodz");
+                lamportSend(touristsId, RELlodz, &lamportClock, packetOut);
+                pthread_mutex_unlock(&lamportMut);
+            }
+
+            while (stan == Wycieczka)
+            {
+                // czekam tu na koniec wycieczki - do stanu Inactive
+            }
+            debug("koncze wycieczke");
         }
     }
 }

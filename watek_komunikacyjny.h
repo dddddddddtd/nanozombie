@@ -3,10 +3,12 @@
 /* wątek komunikacyjny; zajmuje się odbiorem i reakcją na komunikaty */
 void *startKomWatek(void *)
 {
+
     MPI_Status status;
 
     lamportPacket packet;
     lamportPacket packetOut;
+    Request req = Request(-1, -1);
 
     std::string test;
     std::vector<int> receivers;
@@ -20,136 +22,136 @@ void *startKomWatek(void *)
         // obsługa wiadomości o różnych tagach
         switch (status.MPI_TAG)
         {
-        // obsługa REQkucyk
+        // obsługa REQkucyk - otrzymanie prośby na dostęp do stroju kucyka
         case REQkucyk:
-            pthread_mutex_lock(&kucykMut);
-            LISTkucyk.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej ze strojami kucyka
-            // debug("REQkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
-            pthread_mutex_unlock(&kucykMut);
-            receivers = std::vector<int>(1, status.MPI_SOURCE);
-            lamportSend(receivers, ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
+            // request nadawcy
+            req = Request(status.MPI_SOURCE, packet.lamportClock);
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request
+            if (status.MPI_SOURCE == rank || req < kucyk)
+            {
+                receivers = std::vector<int>(1, status.MPI_SOURCE); //nadawca
+                packetOut.answerto = req.lamportClock;
+                pthread_mutex_lock(&lamportMut);
+                // odesłanie do nadawcy potwierdzenia ACKkucyk
+                lamportSend(receivers, ACKkucyk, &lamportClock, packetOut);
+                pthread_mutex_unlock(&lamportMut);
+            }
+            // jeśli nadawca ma późniejszy priorytet do dodaje go do listy oczekujących
+            else
+            {
+                LISTkucykHALT.push_back(req);
+            }
             break;
 
-        // obsługa ACKkucyk
+        // obsługa ACKkucyk - otzymanie zgody na dostęp do stroju kucyka
         case ACKkucyk:
-            kucykACKcount++; // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
-            // debug("ACKkucyk od %d, mam zgod %d/%d", status.MPI_SOURCE, kucykACKcount, touristCount);
-            if (kucykACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
+            if (stan == Inactive && packet.answerto == kucyk.lamportClock)
             {
-                // debug("ACKkucyk mam zgod %d/%d: %s", kucykACKcount, touristCount, stringLIST(LISTkucyk).c_str());
-                changeState(KucykQ); //zmiana stanu na KucykQ
-            }
-            break;
-
-        // obsługa RELkucyk
-        case RELkucyk:
-            pthread_mutex_lock(&kucykMut);
-            LISTkucyk.erase(std::remove(LISTkucyk.begin(), LISTkucyk.end(), status.MPI_SOURCE), LISTkucyk.end()); //usunięcie z kolejki związanej ze strojami kucyka nadawcy komunikatu
-            // debug("RELkucyk od %d: %s", status.MPI_SOURCE, stringLIST(LISTkucyk).c_str());
-            pthread_mutex_unlock(&kucykMut);
-            turysciStan[status.MPI_SOURCE] = 1;
-            // pthread_mutex_lock(&turysciWycieczkaMut);
-            // // debug("PRZED!!! RELkucyk od %d, turysciWycieczka = %d", status.MPI_SOURCE, turysciWycieczka);
-            // turysciWycieczka--;
-            // debug("PO!!! RELkucyk od %d, turysciWycieczka = %d", status.MPI_SOURCE, turysciWycieczka);
-            // pthread_mutex_unlock(&turysciWycieczkaMut);
-            break;
-
-        // obsługa REQlodz
-        case REQlodz:
-            pthread_mutex_lock(&lodzMut);
-            if (turysciStan[status.MPI_SOURCE] != 0)
-                LISTlodz.push_back(Request(status.MPI_SOURCE, packet.lamportClock)); // dodanie żądania do kolejki związanej z łodziami
-            pthread_mutex_unlock(&lodzMut);
-            // debug("odsylam na %d", status.MPI_SOURCE);
-            receivers = std::vector<int>(1, status.MPI_SOURCE);
-            lamportSend(receivers, ACKlodz, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKlodz
-            break;
-
-        // obsługa ACKlodz
-        case ACKlodz:
-            lodzACKcount++; // zwiększenie liczby potwierdzeń dotyczących łodzi
-            // debug("uzyskalem %d/%d potwierdzen ACKlodz", lodzACKcount, touristCount);
-            if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
-            {
-                // debug("ACKlodz %d/%d, %s", lodzACKcount, touristCount, stringLIST(LISTlodz).c_str());
-                // changeState(LodzQ); //zmiana stanu na LodzQ
-                pthread_mutex_lock(&lodzMut);
-                if (LISTlodz.size() != 0)
+                // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+                kucykACKcount++;
+                debug("dostalem ACKkucyk %d/%d od %d z answerto: %d", kucykACKcount, (touristCount - ponyCostumes + 1), status.MPI_SOURCE, packet.answerto);
+                // jeśli uzyskałem już wystarczającą liczbę zgód
+                if (kucykACKcount >= touristCount - ponyCostumes + 1)
                 {
-                    std::sort(LISTlodz.begin(), LISTlodz.end());
-                    int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
-                    if (index == 0)
-                    {
-                        // debug("ZMIENIAM STAN NA LODZTEST (ACKLODZ)");
-                        changeState(LodzTEST);
-                    }
+                    //zmiana stanu na KucykQ
+                    changeState(KucykQ);
                 }
-                pthread_mutex_unlock(&lodzMut);
             }
             break;
 
-        // obsługa RELlodz
-        case RELlodz:
-            lodzieStan[packet.lodz] = 1; // ustawienie stanu łodzi na oczekujący
+        // obsługa RELkucyk - następuje po RELLodz (wysyła tylko sam sobie)
+        case RELkucyk:
+            kucyk.processid = -1;
+            kucyk.lamportClock = -1;
+            pthread_mutex_lock(&lamportMut);
+            // wysłanie do oczekujących na kucyka zgody
+            lamportSendRequest(LISTkucykHALT, ACKkucyk, &lamportClock, packetOut);
+            pthread_mutex_unlock(&lamportMut);
+            // wyczyszczenie listy
+            LISTkucykHALT.clear();
+            changeState(Inactive);
+            break;
 
-            if (nadzorca == status.MPI_SOURCE) // jeśli brał udział w wycieczce nadawcy   && rank != nadzorca
+        // obsługa REQlodz - otrzymanie prośby na dostęp do łodzi
+        case REQlodz:
+            // stworzenie requesta nadawcy
+            req = Request(status.MPI_SOURCE, packet.lamportClock);
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request
+            if (status.MPI_SOURCE == rank || req < lodz)
             {
-                debug("5. wracam z wycieczki, zwalniam stroj kucyka");
-                lamportSend(touristsId, RELkucyk, &lamportClock, packetOut); // zwalnia kucyka
-                changeState(Inactive);                                       // zmienia stan na poczatkowy
-                nadzorca = -1;                                               // ustawia id nadzorcy na -1
+                receivers = std::vector<int>(1, status.MPI_SOURCE);
+                packetOut.answerto = req.lamportClock;
+                pthread_mutex_lock(&lamportMut);
+                // odesłanie do nadawcy potwierdzenia ACKlodz
+                lamportSend(receivers, ACKlodz, &lamportClock, packetOut);
+                pthread_mutex_unlock(&lamportMut);
+            }
+            // jeśli nadawca ma późniejszy priorytet do dodaje go do listy oczekujących na łódź
+            else
+            {
+                LISTlodzHALT.push_back(req);
+            }
+
+            break;
+        // obsługa ACKlodz - otrzymanie zgody na dostęp do łodzi
+        case ACKlodz:
+            // jeśli jestem w KucykQ (stan ubiegania się o łódź) i wiadomość jest do mnie (answerto)
+            if (stan == KucykQ && packet.answerto == lodz.lamportClock)
+            {
+                // zwiększenie liczby potwierdzeń dostępu do łódzi
+                lodzACKcount++;
+                debug("dostalem ACKlodz %d/%d od %d z answerto: %d", lodzACKcount, touristCount, status.MPI_SOURCE, packet.answerto);
+                // jeśli otrzymał zgody od wszystkich turystów
+                if (lodzACKcount == touristCount)
+                {
+                    changeState(LodzQ); //zmiana stanu na lodzQ
+                }
             }
             break;
-
-        // obsługa FULLlodz
+        // obsługa FULLlodz - info że łódz wypływa
         case FULLlodz:
         {
-            int liczbaodplywajacych = packet.count;
-            lodzieStan[packet.lodz] = 0; // zmiana stanu łodzi na wypłyniętą
-            int odplywajace[liczbaodplywajacych];
+            int liczbaOdplywajacych = packet.count;
+            // zmiana stanu łodzi na wypłyniętą
+            lodzieStan[packet.lodz] = 0;
+            int odplywajace[liczbaOdplywajacych];
 
-            // odebranie listy turystów odpływających bez zwiększania zegaru Lamporta (jako część obsługi zdarzenia FULLlodz)
-            // debug("!!!przed odebraniem odplywajacych od %d, odplywajacych = %d", status.MPI_SOURCE, liczbaodplywajacych);
-            MPI_Recv(odplywajace, liczbaodplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
+            MPI_Recv(odplywajace, liczbaOdplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
 
-            // debug("!!!odebralem od %d: %s, stan LISTlodz: %s", status.MPI_SOURCE, stringArray(odplywajace, liczbaodplywajacych).c_str(), stringLIST(LISTlodz).c_str());
-            if (checkIfInArray(odplywajace, liczbaodplywajacych, rank) && status.MPI_SOURCE != rank) // jeśli turysta odpływa tą łodzią
+            // debug("dostalem FULLlodz od %d: %s", status.MPI_SOURCE, stringArray(odplywajace, liczbaOdplywajacych).c_str());
+            // jeśli turysta odpływa tą łodzią
+            if (checkIfInArray(odplywajace, liczbaOdplywajacych, rank))
             {
-                nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
-                changeState(Wycieczka);       // zmiana stanu na Wycieczka
-                debug("3. jade na wycieczke: %s", stringArray(odplywajace, liczbaodplywajacych).c_str());
+                debug("bede wysylac ACKlodz do: %s", stringLIST(LISTlodzHALT).c_str());
+                // ustawienie nadzorcy na nadawcę
+                nadzorca = status.MPI_SOURCE;
+                lodz.processid = -1;
+                lodz.lamportClock = -1;
+                changeState(Wycieczka);
+                pthread_mutex_lock(&lamportMut);
+                lamportSendRequest(LISTlodzHALT, ACKlodz, &lamportClock, packetOut);
+                pthread_mutex_unlock(&lamportMut);
+                LISTlodzHALT.clear();
             }
-
-            // usuwa turystów odplywajacych z listy oczekujących na łódź
-            pthread_mutex_lock(&lodzMut);
-            for (int i = 0; i < liczbaodplywajacych; i++)
-            {
-                turysciStan[odplywajace[i]] = 0;
-                LISTlodz.erase(std::remove(LISTlodz.begin(), LISTlodz.end(), odplywajace[i]), LISTlodz.end());
-            }
-
-            if (LISTlodz.size() != 0)
-            {
-                std::sort(LISTlodz.begin(), LISTlodz.end());
-                int index = std::distance(LISTlodz.begin(), std::find(LISTlodz.begin(), LISTlodz.end(), rank));
-                if (index == 0)
-                {
-                    // debug("ZMIENIAM STAN NA LODZTEST (FULLLODZ)");
-                    changeState(LodzTEST);
-                }
-            }
-
-            // debug("!!!usunalem, stan LISTlodz: %s, nadzorca: %d, turysciWycieczka: %d", stringLIST(LISTlodz).c_str(), nadzorca, turysciWycieczka);
-            pthread_mutex_unlock(&lodzMut);
-            // pthread_mutex_lock(&turysciWycieczkaMut);
-            // // debug("PRZED ODPLYNIECIEM: %d", turysciWycieczka);
-            // turysciWycieczka += liczbaodplywajacych;
-            // // debug("PO ODPLYNIECIU: %d", turysciWycieczka);
-            // pthread_mutex_unlock(&turysciWycieczkaMut);
             break;
         }
-        default:
+
+        case RELlodz:
+            debug("otrzymalem RELlodz od %d: %d", status.MPI_SOURCE, packet.lodz);
+            // zmiana stanu łodzi na dostępna
+            lodzieStan[packet.lodz] = 1;
+
+             // jeśli brał udział w wycieczce nadawcy
+            if (nadzorca == status.MPI_SOURCE)
+            {
+                // ustawia id nadzorcy na -1
+                nadzorca = -1; 
+                pthread_mutex_lock(&lamportMut);
+                // zwalnia kucyka
+                receivers = std::vector<int>(1, rank); //on sam
+                lamportSend(receivers, RELkucyk, &lamportClock, packetOut); 
+                pthread_mutex_unlock(&lamportMut);
+            }
             break;
         }
     }
