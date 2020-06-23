@@ -110,21 +110,23 @@ void *startKomWatek(void *)
                 }
             }
             break;
+        // obsługa FULLlodz - info że łódz wypływa
         case FULLlodz:
         {
-
             int liczbaOdplywajacych = packet.count;
-            lodzieStan[packet.lodz] = 0; // zmiana stanu łodzi na wypłyniętą
+            // zmiana stanu łodzi na wypłyniętą
+            lodzieStan[packet.lodz] = 0; 
             int odplywajace[liczbaOdplywajacych];
 
             MPI_Recv(odplywajace, liczbaOdplywajacych, MPI_INT, status.MPI_SOURCE, DATA, MPI_COMM_WORLD, &status);
 
-            debug("dostalem FULLlodz od %d: %s", status.MPI_SOURCE, stringArray(odplywajace, liczbaOdplywajacych).c_str());
-
-            if (checkIfInArray(odplywajace, liczbaOdplywajacych, rank)) // jeśli turysta odpływa tą łodzią
+            // debug("dostalem FULLlodz od %d: %s", status.MPI_SOURCE, stringArray(odplywajace, liczbaOdplywajacych).c_str());
+            // jeśli turysta odpływa tą łodzią
+            if (checkIfInArray(odplywajace, liczbaOdplywajacych, rank))
             {
                 debug("bede wysylac ACKlodz do: %s", stringLIST(LISTlodzHALT).c_str());
-                nadzorca = status.MPI_SOURCE; // ustawienie nadzorcy na nadawcę
+                // ustawienie nadzorcy na nadawcę
+                nadzorca = status.MPI_SOURCE; 
                 lodz.processid = -1;
                 lodz.lamportClock = -1;
                 changeState(Wycieczka);

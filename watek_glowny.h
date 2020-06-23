@@ -72,6 +72,9 @@ void mainLoop()
             int suma = tourists[rank];
             wycieczka.push_back(rank);
 
+            // sortowanie procesów
+            std::sort(LISTlodzHALT.begin(), LISTlodzHALT.end());
+
             //iteracja po procesach oczekujących
             for (int i = 0; i < LISTlodzHALT.size(); i++)
             {
@@ -90,27 +93,33 @@ void mainLoop()
                     continue;
                 }
             }
-
+            // wycieczka przygotowana
             debug("bede jechac na wycieczke z %s w lodzi %d", stringVector(wycieczka).c_str(), wybieranaLodz);
             lamportPacket packetOut;
-            packetOut.count = wycieczka.size(); // liczba turystów wypływających
-            packetOut.lodz = wybieranaLodz;     // indeks łodzi wypływającej
+            // liczba turystów wypływających
+            packetOut.count = wycieczka.size();
+            // indeks łodzi wypływającej 
+            packetOut.lodz = wybieranaLodz;
             pthread_mutex_lock(&lamportMut);
-            lamportSend(touristsId, FULLlodz, &lamportClock, packetOut); // wysłanie komunikatu FULLłódź do wszystkich turystów
+             // wysłanie komunikatu FULLłódź do wszystkich turystów
+            lamportSend(touristsId, FULLlodz, &lamportClock, packetOut);
             pthread_mutex_unlock(&lamportMut);
-            for (int i = 0; i < size; i++) // przesłanie tablicy z wypływającymi turystami bez zwiększenia zegaru Lamporta (jako część jednej wiadomości wraz z FULLłódź)
+            // przesłanie tablicy z wypływającymi turystami bez zwiększenia zegaru Lamporta (jako część jednej wiadomości wraz z FULLłódź)
+            for (int i = 0; i < size; i++) 
             {
                 MPI_Send(wycieczka.data(), (int)wycieczka.size(), MPI_INT, i, DATA, MPI_COMM_WORLD);
             }
 
             while (stan == LodzQ)
             {
+                // czekam tu na zmianę stanu
             }
         }
 
         if (stan == Wycieczka)
         {
-            debug("jestem na wycieczce z %d", nadzorca) if (nadzorca == rank)
+            debug("jestem na wycieczce z %d", nadzorca); 
+            if (nadzorca == rank)
             {
                 pthread_mutex_lock(&lamportMut);
                 lamportPacket packetOut;
