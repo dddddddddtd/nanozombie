@@ -18,48 +18,45 @@ void *startKomWatek(void *)
     {
         // odbiór dowolnej wiadomości
         lamportReceive(&packet, MPI_ANY_SOURCE, MPI_ANY_TAG, &status, &lamportClock);
-        // debug("ODEBRALEM (%d) od %d", status.MPI_TAG, status.MPI_SOURCE);
 
         // obsługa wiadomości o różnych tagach
         switch (status.MPI_TAG)
         {
-        // obsługa REQkucyk
+        // obsługa REQkucyk - otrzymanie prośby na dostęp do stroju kucyka
         case REQkucyk:
-            // debug("REQkucyk od %d: lamport = %d", status.MPI_SOURCE, packet.lamportClock);
+            // request nadawcy
             req = Request(status.MPI_SOURCE, packet.lamportClock);
-
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request 
             if (status.MPI_SOURCE == rank || req < kucyk)
             {
-                // debug("wysylam ACK do %d", status.MPI_SOURCE);
-                receivers = std::vector<int>(1, status.MPI_SOURCE);
+                receivers = std::vector<int>(1, status.MPI_SOURCE); //nadawca
                 packetOut.answerto = req.lamportClock;
                 pthread_mutex_lock(&lamportMut);
-                lamportSend(receivers, ACKkucyk, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
+                // odesłanie do nadawcy potwierdzenia ACKkucyk
+                lamportSend(receivers, ACKkucyk, &lamportClock, packetOut); 
                 pthread_mutex_unlock(&lamportMut);
             }
+            // jeśli nadawca ma późniejszy priorytet do dodaje go do listy oczekujących
             else
             {
-                // debug("moje: [%d, %d], %d: [%d, %d]\nnie wysylam ACK do %d", kucyk.processid, kucyk.lamportClock, status.MPI_SOURCE, req.processid, req.lamportClock, status.MPI_SOURCE);
                 LISTkucykHALT.push_back(req);
             }
-
             break;
 
-        // obsługa ACKkucyk
+        // obsługa ACKkucyk - otzymanie zgody na dostęp do stroju kucyka
         case ACKkucyk:
             if (stan == Inactive && packet.answerto == kucyk.lamportClock)
             {
-                kucykACKcount++; // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+                // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+                kucykACKcount++; 
                 debug("dostalem ACKkucyk %d/%d od %d z answerto: %d", kucykACKcount, (touristCount - ponyCostumes + 1), status.MPI_SOURCE, packet.answerto);
-                if (kucykACKcount >= touristCount - ponyCostumes + 1) // w momencie uzyskania potwierdzeń od wszystkich turystów
+                // jeśli uzyskałem już wystarczającą liczbę zgód
+                if (kucykACKcount >= touristCount - ponyCostumes + 1) 
                 {
-                    // debug("wszystkie potwierdzenia, KucykQ");
-                    changeState(KucykQ); //zmiana stanu na KucykQ
+                     //zmiana stanu na KucykQ
+                    changeState(KucykQ);
                 }
             }
-
-            // debug("odebralem %d/%d ACKkucyk od %d", kucykACKcount, touristCount, status.MPI_SOURCE);
-
             break;
 
         // obsługa RELkucyk
@@ -76,41 +73,42 @@ void *startKomWatek(void *)
             }
 
             break;
-        case REQlodz:
-            req = Request(status.MPI_SOURCE, packet.lamportClock);
 
+        // obsługa REQlodz - otrzymanie prośby na dostęp do łodzi
+        case REQlodz:
+            // stworzenie requesta nadawcy 
+            req = Request(status.MPI_SOURCE, packet.lamportClock);
+            // jeśli nadawca to ja lub nadawca ma wcześniejszy request 
             if (status.MPI_SOURCE == rank || req < lodz)
             {
-                // debug("wysylam ACK do %d", status.MPI_SOURCE);
-                // LISTlodzOK.push_back(req);
                 receivers = std::vector<int>(1, status.MPI_SOURCE);
                 packetOut.answerto = req.lamportClock;
                 pthread_mutex_lock(&lamportMut);
-                lamportSend(receivers, ACKlodz, &lamportClock, packetOut); // odesłanie do nadawcy potwierdzenia ACKkucyk
+                 // odesłanie do nadawcy potwierdzenia ACKlodz
+                lamportSend(receivers, ACKlodz, &lamportClock, packetOut);
                 pthread_mutex_unlock(&lamportMut);
             }
+            // jeśli nadawca ma późniejszy priorytet do dodaje go do listy oczekujących na łódź
             else
             {
-                // debug("moje: [%d, %d], %d: [%d, %d]\nnie wysylam ACK do %d", kucyk.processid, kucyk.lamportClock, status.MPI_SOURCE, req.processid, req.lamportClock, status.MPI_SOURCE);
                 LISTlodzHALT.push_back(req);
             }
 
             break;
-
+        // obsługa ACKlodz - otrzymanie zgody na dostęp do łodzi
         case ACKlodz:
+            // jeśli jestem w KucykQ (stan ubiegania się o łódź) i wiadomość jest do mnie (answerto)
             if (stan == KucykQ && packet.answerto == lodz.lamportClock)
             {
-                lodzACKcount++; // zwiększenie liczby potwierdzeń dotyczących stroju kucyka
+                // zwiększenie liczby potwierdzeń dostępu do łódzi
+                lodzACKcount++; 
                 debug("dostalem ACKlodz %d/%d od %d z answerto: %d", lodzACKcount, touristCount, status.MPI_SOURCE, packet.answerto);
-                if (lodzACKcount == touristCount) // w momencie uzyskania potwierdzeń od wszystkich turystów
+                 // jeśli otrzymał zgody od wszystkich turystów
+                if (lodzACKcount == touristCount)
                 {
-                    // debug("wszystkie potwierdzenia, KucykQ");
-                    changeState(LodzQ); //zmiana stanu na KucykQ
+                    changeState(LodzQ); //zmiana stanu na lodzQ
                 }
             }
-
-            // debug("odebralem %d/%d ACKkucyk od %d", kucykACKcount, touristCount, status.MPI_SOURCE);
-
             break;
         case FULLlodz:
         {

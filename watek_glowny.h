@@ -5,87 +5,87 @@ void mainLoop()
     int licznik = 0;
     while (1)
     {
-        // licznik++;
-        // while (licznik > 4)
-        // {
-        // }
-
-        // debug("%d", stan);
-        if (stan == Inactive) // stan nieaktywny
+        // stan nieaktywny,  początkowy - ubieganie sie o kostium kucyka
+        if (stan == Inactive)
         {
-            // waitFor("zanim zaczne ubiegac sie o kucyka"); // oczekiwanie przez wylosowany czas i wypisanie komunikatu
             debug("1. ubiegam się o kostium kucyka");
-            // debug("1. ubiegam się o kostium kucyka");
+            // zerowanie liczby zgód na kostium kucyka
             kucykACKcount = 0;
 
             pthread_mutex_lock(&lamportMut);
             lamportPacket packetOut;
+            // stworzenie requesta
             kucyk = Request(rank, lamportClock + 1);
+            // wysłanie REQkucyk do wszystkich procesów
             lamportSend(touristsId, REQkucyk, &lamportClock, packetOut);
             pthread_mutex_unlock(&lamportMut);
 
             while (stan == Inactive)
             {
-                //czekam na
+                //czekam na zmianę stanu tu
             }
         }
 
-        if (stan == KucykQ) // stan oczekiwania, aż proces będzie wśród ponyCostumes pierwszych procesów w kolejce dotyczącej kostiumu kucyka
+        // stan, w którym proces bierze stan kostiym kucyka i zaczyna ubiegać się dostęp do łodzi
+        if (stan == KucykQ)
         {
-
+            
             debug("2. biore stroj kucyka  i ubiega sie o lodz");
-            // waitFor("3. czekam przed zwolnieniem stroju");
-            // waitFor("3. czekam jeszcze dluzej");
-
+            // zerowanie liczby zgód na dostęp do łodzi
             lodzACKcount = 0;
 
             pthread_mutex_lock(&lamportMut);
             lamportPacket packetOut;
+            // stworzenie requesta
             lodz = Request(rank, lamportClock + 1);
+            // wysłanie REQlodz do wszystkich procesów
             lamportSend(touristsId, REQlodz, &lamportClock, packetOut);
             pthread_mutex_unlock(&lamportMut);
 
             while (stan == KucykQ)
             {
+                // czekam na zmianę stanu tu
             }
         }
 
         if (stan == LodzQ)
         {
             debug("czekam na pozostalych turystow");
-            int licz = 0;
-            while (LISTlodzHALT.size() < ponyCostumes - 1) // czekam, az wszyscy turysci w strojach kucyka beda ubiegac sie o lodz
-            {   
-                // waitFor("czekam na wypelnienie LISTlodzHALT");
-                // debug("licz %d: %d < %d", licz, (int)LISTlodzHALT.size(), ponyCostumes - 1);
-                // licz++;
+            while (LISTlodzHALT.size() < ponyCostumes - 1)
+            { 
+                // czekam, az wszyscy turysci w strojach kucyka beda ubiegac sie o lodz 
+                // LISTlodzHALT - procesy, które czekają na dostęp do łodzi, ale mają niższy priorytet ode mnie
             }
             debug("czekam na wolna lodz");
-
-            while (lodzieStan[wybieranaLodz] == 0) // znajduje wolna lodz
+            // iterowanie się po łodziach, sprawdzanie czy któraś nie jest dostępna (1)
+            while (lodzieStan[wybieranaLodz] == 0)
             {
-
                 wybieranaLodz = (wybieranaLodz + 1) % lodzCount;
             }
-
             debug("wybralem lodz");
 
+            // tworzenie nowej wycieczki
             wycieczka.clear();
 
+            // suma sumuje rozmiar turystów na łodzi
+            // pierwszy dołącza rank
             int suma = tourists[rank];
             wycieczka.push_back(rank);
 
+            //iteracja po procesach oczekujących
             for (int i = 0; i < LISTlodzHALT.size(); i++)
             {
                 suma += tourists[LISTlodzHALT[i].processid];
-
+                // jesli dany proces-turysta się mieści to jest dodawany
                 if (suma <= lodziePojemnosc[wybieranaLodz])
                 {
-                    wycieczka.push_back(LISTlodzHALT[i].processid); // dodanie turysty do wektora turystów wypływających, jeśli mieści się on w łodzi
+                    // jest dodawany do wycieczki
+                    wycieczka.push_back(LISTlodzHALT[i].processid);
                 }
 
                 if (suma > lodziePojemnosc[wybieranaLodz])
                 {
+                    // a jesli nie to jest usuwany
                     suma -= tourists[LISTlodzHALT[i].processid];
                     continue;
                 }
